@@ -90,15 +90,6 @@ type StorageCtx = {
   storage: { getUrl: (storageId: string) => Promise<string | null> };
 };
 
-async function resolveProductImage(
-  ctx: StorageCtx,
-  image: string,
-): Promise<string> {
-  if (image.startsWith("http://") || image.startsWith("https://")) return image;
-  const url = await ctx.storage.getUrl(image);
-  return url ?? "";
-}
-
 async function resolveProduct(
   ctx: StorageCtx,
   product: Doc<"products">,

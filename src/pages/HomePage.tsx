@@ -26,7 +26,7 @@ import {
   type SortOption,
 } from "@/components/store/SortSelect";
 import { formatPrice } from "@/lib/format";
-import { categoryLabel, type Product } from "@/types/product";
+import { categoryLabel } from "@/types/product";
 
 /** Página inicial: hero + catálogo completo com filtros, busca e ordenação. */
 export default function HomePage() {
@@ -44,7 +44,6 @@ export default function HomePage() {
   const community = useQuery(api.products.listCommunity);
 
   const loading = products === undefined || categories === undefined;
-  const list = products ?? [];
 
   const setParam = (key: string, value: string | null) => {
     const params = new URLSearchParams(searchParams);
@@ -56,6 +55,7 @@ export default function HomePage() {
   const clearFilters = () => setSearchParams({});
 
   const filtered = useMemo(() => {
+    const list = products ?? [];
     let result = [...list];
     const term = q.trim().toLowerCase();
     if (term) {
@@ -78,7 +78,7 @@ export default function HomePage() {
         break;
     }
     return result;
-  }, [list, q, sort]);
+  }, [products, q, sort]);
 
   const hasFilters = Boolean(category || q || sort !== "relevance");
   const heroProducts = (allProducts ?? []).slice(0, 3);

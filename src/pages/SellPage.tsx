@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { BadgePlus, ImagePlus, Loader2, Upload, X } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
@@ -23,46 +23,14 @@ import { ErrorState } from "@/components/store/ErrorState";
 import { useAuth } from "@/hooks/use-auth";
 import { PRODUCT_CATEGORIES } from "@/types/product";
 
+/** Carrega o produto em modo de edição e cuida de permissões. */
 function SellForm() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const editId = searchParams.get("editar") as Id<"products"> | null;
+  const editId = (searchParams.get("editar") ?? null) as Id<"products"> | null;
 
-  const product = useQuery(
-    api.products.get,
-    editId ? { id: editId } : "skip",
-  );
-
-  const createProduct = useMutation(api.products.create);
-  const updateProduct = useMutation(api.products.update);
-  const generateUploadUrl = useMutation(api.products.generateUploadUrl);
-
-  const [title, setTitle] = useState(product?.title ?? "");
-  const [description, setDescription] = useState(product?.description ?? "");
-  const [category, setCategory] = useState(product?.category ?? "");
-  const [price, setPrice] = useState(product ? String(product.price) : "");
-  const [stock, setStock] = useState(product ? String(product.stock) : "");
-  const [imageUrl, setImageUrl] = useState(product?.image ?? "");
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState(product?.image ?? "");
-  const [submitting, setSubmitting] = useState(false);
-
-  // Ao carregar o produto em modo de edição, preenche o formulário.
-  useEffect(() => {
-    if (product) {
-      setTitle(product.title);
-      setDescription(product.description);
-      setCategory(product.category);
-      setPrice(String(product.price));
-      setStock(String(product.stock));
-      setImageUrl(product.image);
-      setPreview(product.image);
-    }
-  }, [product]);
-
-  const isOwner =
-    product && (product.sellerId === user?._id || user?.role === "admin");
+  const product = useQuery(api.products.get, editId ? { id: editId } : "skip");
 
   if (editId && product === undefined) {
     return (
@@ -72,6 +40,9 @@ function SellForm() {
       </div>
     );
   }
+
+  const isOwner =
+    product && (product.sellerId === user?._id || user?.role === "admin");
 
   if (editId && (!product || !isOwner)) {
     return (
@@ -83,6 +54,41 @@ function SellForm() {
       </div>
     );
   }
+
+  return (
+    <ListingForm
+      key={editId ?? "novo"}
+      initial={product ?? undefined}
+      editId={editId}
+      onDone={(productId) => navigate(`/produto/${productId}`)}
+    />
+  );
+}
+
+/** Formulário de criação/edição — estado inicializado a partir do produto. */
+function ListingForm({
+  initial,
+  editId,
+  onDone,
+}: {
+  initial: Doc<"products"> | undefined;
+  editId: Id<"products"> | null;
+  onDone: (id: Id<"products">) => void;
+}) {
+  const navigate = useNavigate();
+  const createProduct = useMutation(api.products.create);
+  const updateProduct = useMutation(api.products.update);
+  const generateUploadUrl = useMutation(api.products.generateUploadUrl);
+
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [description, setDescription] = useState(initial?.description ?? "");
+  const [category, setCategory] = useState(initial?.category ?? "");
+  const [price, setPrice] = useState(initial ? String(initial.price) : "");
+  const [stock, setStock] = useState(initial ? String(initial.stock) : "");
+  const [imageUrl, setImageUrl] = useState(initial?.image ?? "");
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState(initial?.image ?? "");
+  const [submitting, setSubmitting] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
@@ -144,14 +150,14 @@ function SellForm() {
         stock: parsedStock,
       };
 
-      if (editId && product) {
+      if (editId && initial) {
         await updateProduct({ id: editId, ...args });
         toast.success("Anúncio atualizado com sucesso!");
-        navigate(`/produto/${editId}`);
+        onDone(editId);
       } else {
         const newId = await createProduct(args);
         toast.success("Anúncio publicado! Ele já aparece no catálogo.");
-        navigate(`/produto/${newId}`);
+        onDone(newId);
       }
     } catch (err) {
       toast.error(
@@ -334,9 +340,7 @@ function SellForm() {
             variant="outline"
             size="lg"
             className="rounded-full"
-            onClick={() =>
-              navigate(editId ? "/conta?aba=anuncios" : "/")
-            }
+            onClick={() => navigate(editId ? "/conta?aba=anuncios" : "/")}
           >
             Cancelar
           </Button>

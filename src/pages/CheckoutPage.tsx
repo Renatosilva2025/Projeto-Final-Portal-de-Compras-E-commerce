@@ -18,20 +18,9 @@ import { formatPrice } from "@/lib/format";
 import { PAYMENT_METHODS } from "@/types/product";
 
 function Checkout() {
-  const { items, subtotal, count, clearCart } = useCart();
+  const { items } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const createOrder = useMutation(api.orders.create);
-
-  const [name, setName] = useState(user?.name ?? "");
-  const [street, setStreet] = useState("");
-  const [number, setNumber] = useState("");
-  const [complement, setComplement] = useState("");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("");
-  const [zip, setZip] = useState("");
-  const [payment, setPayment] = useState<string>(PAYMENT_METHODS[0].value);
-  const [submitting, setSubmitting] = useState(false);
 
   if (items.length === 0) {
     return (
@@ -46,6 +35,27 @@ function Checkout() {
       </div>
     );
   }
+
+  // `key` remonta o formulário assim que o perfil do usuário carrega,
+  // para o nome já vir preenchido sem efeitos colaterais.
+  return <CheckoutForm key={user?._id ?? "guest"} />;
+}
+
+function CheckoutForm() {
+  const { items, subtotal, count, clearCart } = useCart();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const createOrder = useMutation(api.orders.create);
+
+  const [name, setName] = useState(user?.name ?? "");
+  const [street, setStreet] = useState("");
+  const [number, setNumber] = useState("");
+  const [complement, setComplement] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [zip, setZip] = useState("");
+  const [payment, setPayment] = useState<string>(PAYMENT_METHODS[0].value);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

@@ -43,12 +43,13 @@ const TRUST_ITEMS = [
 export default function ProductPage() {
   const { id } = useParams();
   const productId = id as Id<"products">;
+  const isValidId = typeof id === "string" && /^[A-Za-z0-9]{10,}$/.test(id);
   const navigate = useNavigate();
   const { addItem } = useCart();
   const { isAuthenticated, user } = useAuth();
 
-  const product = useQuery(api.products.get, { id: productId });
-  const reviews = useQuery(api.reviews.listByProduct, { productId });
+  const product = useQuery(api.products.get, isValidId ? { id: productId } : "skip");
+  const reviews = useQuery(api.reviews.listByProduct, isValidId ? { productId } : "skip");
   const allProducts = useQuery(api.products.list, {});
 
   const [quantity, setQuantity] = useState(1);
@@ -100,6 +101,19 @@ export default function ProductPage() {
       toast.error(err instanceof Error ? err.message : "Não foi possível remover.");
     }
   };
+
+  if (!isValidId) {
+    return (
+      <StoreLayout>
+        <div className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6">
+          <ErrorState
+            message="Produto não encontrado. Ele pode ter sido removido do catálogo."
+            onRetry={() => navigate("/")}
+          />
+        </div>
+      </StoreLayout>
+    );
+  }
 
   if (product === undefined) {
     return (

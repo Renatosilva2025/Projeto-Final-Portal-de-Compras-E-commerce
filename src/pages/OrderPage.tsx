@@ -28,7 +28,22 @@ function paymentLabel(value: string) {
 function OrderDetails() {
   const { id } = useParams();
   const orderId = id as Id<"orders">;
-  const order = useQuery(api.orders.get, { id: orderId });
+  const isValidId = typeof id === "string" && /^[A-Za-z0-9]{10,}$/.test(id);
+  const order = useQuery(api.orders.get, isValidId ? { id: orderId } : "skip");
+
+  if (!isValidId) {
+    return (
+      <div className="mx-auto w-full max-w-3xl px-4 py-16 text-center sm:px-6">
+        <p className="font-serif text-3xl font-bold">Pedido não encontrado</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Este pedido não existe ou você não tem permissão para vê-lo.
+        </p>
+        <Button asChild className="mt-6 rounded-full">
+          <Link to="/">Voltar à loja</Link>
+        </Button>
+      </div>
+    );
+  }
 
   if (order === undefined) {
     return (

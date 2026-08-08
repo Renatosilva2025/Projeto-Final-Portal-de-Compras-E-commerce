@@ -73,9 +73,10 @@ export function Footer() {
             Sobre o projeto
           </h3>
           <p className="text-sm leading-6 text-muted-foreground">
-            Projeto final acadêmico desenvolvido com React, Vite, React Router
-            e Convex — com catálogo, carrinho, checkout, avaliações e painel
-            administrativo.
+            Projeto final acadêmico desenvolvido por{" "}
+            <span className="font-medium text-foreground">Renato Silva</span> com
+            React, Vite, React Router e Convex — com catálogo, carrinho,
+            checkout, avaliações e painel administrativo.
           </p>
           <p className="text-xs text-muted-foreground/70">
             Catálogo semeador da{" "}
@@ -97,8 +98,8 @@ export function Footer() {
             © {new Date().getFullYear()} Portal de Compras PD
           </span>
           <span className="hidden items-center gap-1 sm:flex">
-            Feito com <Heart className="size-3.5 fill-red-500 text-red-500" />{" "}
-            em React + Convex
+            Feito com <Heart className="size-3.5 fill-red-500 text-red-500" /> por{" "}
+            <span className="font-semibold text-foreground">Renato Silva</span>
           </span>
         </p>
       </div>

@@ -1,48 +1,52 @@
-# 🛍️ Vitrine — Portal de Compras (E-commerce)
+# 🛍️ Portal de Compras PD
 
-Projeto final de Front-End: um **portal de compras completo** que simula um
-e-commerce real, consumindo a [Fake Store API](https://fakestoreapi.com/).
+**Projeto final acadêmico desenvolvido por Renato Silva** — um portal de
+compras completo de eletrônicos e acessórios (capas de celular, carregadores,
+notebooks, fones, smartphones…), no estilo de um marketplace como Shopee ou
+AliExpress, com preços em **reais (R$)**.
 
 ## 📋 Descrição do projeto
 
-O **Vitrine** é uma aplicação React que lista produtos de uma API externa,
-permite filtrar por categoria, buscar por nome, ordenar por preço/avaliação,
-visualizar a página de detalhes de cada produto e gerenciar um **carrinho de
-compras persistente** (salvo em `localStorage`). O projeto também inclui um
-sistema de favoritos, tema claro/escuro, indicadores de carregamento
-(skeleton), tratamento de erros com retry e feedback visual para todas as
-ações do usuário (toasts).
+O **Portal de Compras PD** é um marketplace completo: catálogo de produtos com
+busca, filtros e ordenação, página de detalhes com avaliações, carrinho,
+checkout com endereço e forma de pagamento (Pix, cartão ou boleto — simulado),
+histórico de pedidos com acompanhamento de status, anúncios da comunidade
+(qualquer usuário pode vender), área do vendedor e painel administrativo.
+
+O backend roda em **Convex**: o catálogo é semeador a partir da Fake Store
+API (com preços convertidos de dólar para reais) e os anúncios criados pelos
+usuários são armazenados no banco, junto com avaliações e pedidos.
 
 ## 🛠️ Tecnologias utilizadas
 
-| Tecnologia   | Finalidade                                   |
-| ------------ | -------------------------------------------- |
-| **React 19** | Biblioteca de interface (componentização)    |
-| **Vite**     | Build tool e dev server                      |
-| **TypeScript** | Tipagem estática                          |
-| **React Router 7** | Roteamento entre páginas                |
-| **Fetch API** | Consumo da Fake Store API                  |
-| **Context API** | Gerenciamento de estado global (carrinho e favoritos) |
-| **localStorage** | Persistência de dados (carrinho e favoritos) |
-| **Tailwind CSS 4** | Estilização                              |
-| **Framer Motion** | Animações e micro-interações             |
-| **Sonner**   | Toasts de confirmação                        |
+| Tecnologia      | Finalidade                                      |
+| --------------- | ----------------------------------------------- |
+| **React 19**    | Biblioteca de interface (componentização)       |
+| **Vite**        | Build tool e dev server                         |
+| **TypeScript**  | Tipagem estática                                |
+| **React Router 7** | Roteamento entre páginas                     |
+| **Convex**      | Backend, banco de dados e autenticação          |
+| **Convex Auth** | Login e cadastro (email/OTP + anônimo)          |
+| **Tailwind CSS 4** | Estilização                                  |
+| **shadcn/ui**   | Componentes de interface                        |
+| **Framer Motion** | Animações e micro-interações                  |
+| **Sonner**      | Toasts de confirmação                           |
 
-> API utilizada: [Fake Store API](https://fakestoreapi.com/) —
-> `https://fakestoreapi.com/products`
+> API de semeadura: [Fake Store API](https://fakestoreapi.com/) —
+> `https://fakestoreapi.com/products` (preços exibidos em R$).
 
 ## 🚀 Como instalar
 
 Pré-requisitos: **Node.js 18+** e **Bun** (ou npm).
 
 ```bash
-# 1. Clone o repositório
-git clone <url-do-repositorio>
-cd <pasta-do-projeto>
-
-# 2. Instale as dependências
+# 1. Instale as dependências
 bun install
 # ou: npm install
+
+# 2. Configure o Convex (variáveis de ambiente do deployment)
+# 3. Inicie o backend local
+bun convex dev
 ```
 
 ## ▶️ Como executar
@@ -58,81 +62,75 @@ bun run build
 bun run preview
 ```
 
-Abra o endereço indicado no terminal (padrão: `http://localhost:5173`).
-
-> **Importante:** a aplicação consome a Fake Store API diretamente do
-> navegador. O projeto também possui autenticação opcional (email/OTP) via
-> Convex — caso queira usar a rota `/auth`, configure as variáveis de
-> ambiente do Convex (chave de deployment).
+Abra o endereço indicado no terminal (padrão: `http://localhost:5173`). Na
+primeira visita, o catálogo é semeado automaticamente no Convex.
 
 ## ✨ Funcionalidades implementadas
 
-### Obrigatórias
-
-- ✅ **Página inicial** — lista todos os produtos da API em cards responsivos
-  (imagem, nome, preço formatado e ação para ver detalhes).
-- ✅ **Página de detalhes** (`/produto/:id`) — imagem, nome, descrição,
-  categoria, preço, avaliação (estrelas + nº de avaliações) e botão de
-  adicionar ao carrinho. Navegação com **React Router**.
-- ✅ **Filtro por categorias** — chips com `Electronics`, `Jewelery`,
-  `Men's Clothing` e `Women's Clothing` (nomes traduzidos em PT-BR).
-- ✅ **Carrinho de compras** — estado global com **Context API**:
-  adicionar, remover, alterar quantidade e exibir o **total em tempo real**.
-  Os itens ficam **salvos em `localStorage`** mesmo após atualizar a página.
+- ✅ **Catálogo** — produtos em cards responsivos com imagem, nome, preço em
+  R$ e avaliação; busca com debounce, filtro por categoria e ordenação
+  (preço/avaliação) sincronizados com a URL.
+- ✅ **Página de detalhes** (`/produto/:id`) — imagem, descrição, estoque,
+  vendedor, avaliação com estrelas e seção de comentários (login obrigatório
+  para avaliar).
+- ✅ **Carrinho de compras** — estado global com Context API + persistência em
+  `localStorage`: adicionar, remover, alterar quantidade e total em tempo real.
+- ✅ **Favoritos** — coração nos cards, página `/favoritos` e persistência no
+  navegador.
+- ✅ **Checkout** (`/checkout`, protegido por login) — endereço de entrega,
+  forma de pagamento (Pix/cartão/boleto, simulado), total calculado no
+  servidor e baixa de estoque.
+- ✅ **Pedidos** (`/pedido/:id`) — confirmação com status, itens, endereço e
+  forma de pagamento; histórico em `Minha conta`.
+- ✅ **Anunciar** (`/anunciar`) — qualquer usuário cadastra produtos com upload
+  de imagem (Convex Storage), edita, pausa/reativa ou remove seus anúncios.
+- ✅ **Minha conta** (`/conta`) — visão geral, pedidos, gestão de anúncios e
+  edição de perfil.
+- ✅ **Painel administrativo** (`/admin`) — estatísticas (receita), gestão de
+  produtos, controle de status de pedidos e funções de usuários.
 - ✅ **Experiência do usuário** — skeleton loading, tratamento de erros com
-  botão "tentar novamente", toasts de feedback, interface responsiva.
-- ✅ **Organização do projeto** — `components/`, `pages/`, `hooks/`,
-  `services/`, `context/` e `lib/` com componentes reutilizáveis.
-- ✅ **Documentação** — este `README.md`.
-
-### Extras (opcionais) 🎁
-
-- ✅ Barra de busca com **debounce** (`?q=...`)
-- ✅ **Dark Mode** (alternador no cabeçalho, persistido no navegador)
-- ✅ Animações entre páginas e micro-interações (Framer Motion)
-- ✅ **Ordenação por preço** (menor/maior) e por avaliação (`?ordem=...`)
-- ✅ **Sistema de favoritos** (página `/favoritos`, persistido no navegador)
-- ✅ **Skeleton Loading** e **Toasts de confirmação**
-- ✅ Drawer lateral do carrinho com resumo em tempo real
-- ✅ Filtros sincronizados com a URL (compartilháveis)
-- ✅ Checkout simulado com diálogo de confirmação
+  "tentar novamente", toasts, tema claro/escuro e interface responsiva.
 
 ## 🗂️ Estrutura do projeto
 
 ```
 src/
 ├─ components/
-│  ├─ layout/        → Header, Footer, Logo, StoreLayout
+│  ├─ layout/        → Header, Footer, Logo
 │  ├─ store/         → ProductCard, CategoryFilter, SearchBar, CartDrawer…
 │  └─ ui/            → shadcn/ui (Button, Badge, Skeleton, Select…)
-├─ context/          → cart-context (Context API + localStorage), favorites-context
-├─ hooks/            → use-debounce, use-local-storage
-├─ lib/              → format (preços), utils (cn)
-├─ pages/            → HomePage, ProductPage, CartPage, FavoritesPage, Auth, NotFound
-├─ services/         → api.ts (cliente da Fake Store API)
+├─ context/          → cart-context, favorites-context
+├─ convex/           → schema, produtos, pedidos, avaliações, usuários, auth
+├─ hooks/            → use-debounce, use-local-storage, use-auth
+├─ lib/              → format (preços em R$), utils (cn)
+├─ pages/            → HomePage, ProductPage, CartPage, CheckoutPage,
+│                      OrderPage, AccountPage, SellPage, AdminPage, Auth…
 ├─ types/            → product.ts (tipos e rótulos de categoria)
-├─ convex/           → autenticação (email/OTP + anônimo)
 └─ main.tsx          → providers, rotas e bootstrap
 ```
 
 ## 🔗 Rotas
 
-| Rota               | Descrição                              |
-| ------------------ | -------------------------------------- |
-| `/`                | Página inicial com o catálogo completo |
-| `/produto/:id`     | Detalhes do produto                    |
-| `/carrinho`        | Carrinho de compras                    |
-| `/favoritos`       | Produtos favoritos                     |
-| `/auth`            | Login/cadastro (opcional)              |
-| `*`                | Página 404                             |
+| Rota               | Descrição                                     |
+| ------------------ | --------------------------------------------- |
+| `/`                | Página inicial com o catálogo completo        |
+| `/produto/:id`     | Detalhes do produto e avaliações              |
+| `/carrinho`        | Carrinho de compras                           |
+| `/checkout`        | Finalização da compra (requer login)          |
+| `/pedido/:id`      | Confirmação e acompanhamento do pedido        |
+| `/favoritos`       | Produtos favoritos                            |
+| `/conta`           | Dashboard do usuário (pedidos, anúncios, perfil) |
+| `/anunciar`        | Cadastrar/editar anúncios                     |
+| `/admin`           | Painel administrativo (apenas administradores) |
+| `/auth`            | Login/cadastro                                |
+| `*`                | Página 404                                    |
 
 ## 🧠 Conceitos aplicados
 
-- Consumo de API externa com `fetch` + tratamento de erros
-- Hooks do React (`useState`, `useEffect`, `useMemo`, `useCallback`, hooks
-  customizados)
-- Gerenciamento de estado global com Context API
-- Persistência de dados com `localStorage`
-- Roteamento com React Router
-- Componentização e reutilização de componentes
-- Responsividade e boas práticas de UX
+- Backend como serviço com **Convex** (queries reativas, mutations e actions)
+- Autenticação com **Convex Auth** (email/OTP + anônimo) e controle de papéis
+  (usuário/administrador)
+- Gerenciamento de estado global com Context API + persistência em
+  `localStorage`
+- Roteamento com React Router, componentes reutilizáveis e responsividade
+- Boas práticas de UX: skeletons, toasts, dark mode e micro-interações

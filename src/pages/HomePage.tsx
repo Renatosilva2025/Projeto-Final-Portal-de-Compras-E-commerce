@@ -1,6 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { motion } from "framer-motion";
-import { ArrowDown, Heart, PackageSearch, SearchX } from "lucide-react";
+import {
+  ArrowDown,
+  Heart,
+  PackageSearch,
+  SearchX,
+  Store,
+} from "lucide-react";
 import { Link, useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,20 +17,16 @@ import { Header } from "@/components/layout/Header";
 import { CartDrawer } from "@/components/store/CartDrawer";
 import { CategoryFilter } from "@/components/store/CategoryFilter";
 import { EmptyState } from "@/components/store/EmptyState";
-import { ErrorState } from "@/components/store/ErrorState";
 import { ProductCard } from "@/components/store/ProductCard";
 import { ProductCardSkeleton } from "@/components/store/ProductCardSkeleton";
 import { ProductImage } from "@/components/store/ProductImage";
-import { SortSelect, SORT_OPTIONS, type SortOption } from "@/components/store/SortSelect";
-import { fetchCategories, fetchProducts } from "@/services/api";
+import {
+  SortSelect,
+  SORT_OPTIONS,
+  type SortOption,
+} from "@/components/store/SortSelect";
 import { formatPrice } from "@/lib/format";
 import { categoryLabel, type Product } from "@/types/product";
-
-const HERO_STATS = [
-  { value: "20+", label: "Produtos na vitrine" },
-  { value: "4", label: "Categorias" },
-  { value: "US$", label: "Preços reais da API" },
-];
 
 /** Página inicial: hero + catálogo completo com filtros, busca e ordenação. */
 export default function HomePage() {
@@ -34,84 +38,50 @@ export default function HomePage() {
     ? (rawSort as SortOption)
     : "relevance";
 
-  const [products, setProducts] = useState<Product[] | null>(null);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const products = useQuery(api.products.list, category ? { category } : {});
+  const allProducts = useQuery(api.products.list, {});
+  const categories = useQuery(api.products.categories);
+  const community = useQuery(api.products.listCommunity);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [productsData, categoriesData] = await Promise.all([
-        fetchProducts(),
-        fetchCategories(),
-      ]);
-      setProducts(productsData);
-      setCategories(categoriesData);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Erro inesperado ao carregar os produtos.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const loading = products === undefined || categories === undefined;
+  const list = products ?? [];
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const setParam = (key: string, value: string | null) => {
+    const params = new URLSearchParams(searchParams);
+    if (value) params.set(key, value);
+    else params.delete(key);
+    setSearchParams(params);
+  };
 
-  const setParam = useCallback(
-    (key: string, value: string | null) => {
-      const params = new URLSearchParams(searchParams);
-      if (value) params.set(key, value);
-      else params.delete(key);
-      setSearchParams(params);
-    },
-    [searchParams, setSearchParams],
-  );
-
-  const clearFilters = useCallback(() => {
-    setSearchParams({});
-  }, [setSearchParams]);
+  const clearFilters = () => setSearchParams({});
 
   const filtered = useMemo(() => {
-    if (!products) return [];
-    let list = [...products];
-
-    if (category) {
-      list = list.filter((p) => p.category === category);
-    }
-
+    let result = [...list];
     const term = q.trim().toLowerCase();
     if (term) {
-      list = list.filter(
+      result = result.filter(
         (p) =>
           p.title.toLowerCase().includes(term) ||
           p.description.toLowerCase().includes(term) ||
           categoryLabel(p.category).toLowerCase().includes(term),
       );
     }
-
     switch (sort) {
       case "price-asc":
-        list.sort((a, b) => a.price - b.price);
+        result.sort((a, b) => a.price - b.price);
         break;
       case "price-desc":
-        list.sort((a, b) => b.price - a.price);
+        result.sort((a, b) => b.price - a.price);
         break;
       case "rating-desc":
-        list.sort((a, b) => b.rating.rate - a.rating.rate);
+        result.sort((a, b) => b.rating.rate - a.rating.rate);
         break;
     }
-    return list;
-  }, [products, category, q, sort]);
+    return result;
+  }, [list, q, sort]);
 
   const hasFilters = Boolean(category || q || sort !== "relevance");
-  const heroProducts = products?.slice(0, 3);
+  const heroProducts = (allProducts ?? []).slice(0, 3);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -127,17 +97,18 @@ export default function HomePage() {
             <div className="space-y-6">
               <span className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/25 bg-primary/5 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
                 <PackageSearch className="size-4" />
-                Projeto Final — Portal de Compras
+                Portal de Compras PD · Projeto final
               </span>
 
               <h1 className="font-serif text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
-                O catálogo que você procura,{" "}
+                Eletrônicos e acessórios,{" "}
                 <span className="italic text-primary">em um só lugar.</span>
               </h1>
 
               <p className="max-w-lg text-base leading-7 text-muted-foreground sm:text-lg">
-                Explore produtos de eletrônicos, joias e moda em uma vitrine
-                única e elegante — alimentada pela Fake Store API.
+                Capas de celular, carregadores, notebooks, fones e muito mais —
+                compre como em um marketplace, anuncie seus produtos e avalie
+                o que comprou.
               </p>
 
               <div className="flex flex-wrap gap-3">
@@ -158,10 +129,28 @@ export default function HomePage() {
                     Ver favoritos
                   </Link>
                 </Button>
+                <Button
+                  asChild
+                  size="lg"
+                  variant="ghost"
+                  className="rounded-full text-muted-foreground"
+                >
+                  <Link to="/anunciar">
+                    <Store className="size-4" />
+                    Quero vender
+                  </Link>
+                </Button>
               </div>
 
               <dl className="flex flex-wrap gap-x-10 gap-y-4 pt-2">
-                {HERO_STATS.map((stat) => (
+                {[
+                  {
+                    value: `${(allProducts ?? []).length}+`,
+                    label: "Produtos na vitrine",
+                  },
+                  { value: `${categories?.length ?? "—"}`, label: "Categorias" },
+                  { value: "US$", label: "Preços reais da API" },
+                ].map((stat) => (
                   <div key={stat.label}>
                     <dt className="sr-only">{stat.label}</dt>
                     <dd className="font-serif text-2xl font-bold text-primary">
@@ -180,7 +169,7 @@ export default function HomePage() {
               <div className="absolute left-1/2 top-1/2 size-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/15 blur-3xl" />
               <div className="absolute left-1/2 top-1/2 size-52 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-dashed border-primary/30" />
 
-              {heroProducts ? (
+              {heroProducts.length > 0 ? (
                 heroProducts.map((product, i) => {
                   const position = [
                     "left-6 top-20 -rotate-6",
@@ -189,7 +178,7 @@ export default function HomePage() {
                   ][i];
                   return (
                     <motion.div
-                      key={product.id}
+                      key={product._id}
                       className={`absolute w-36 ${position}`}
                       initial={{ opacity: 0, y: 28 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -200,7 +189,7 @@ export default function HomePage() {
                       }}
                     >
                       <Link
-                        to={`/produto/${product.id}`}
+                        to={`/produto/${product._id}`}
                         className="block rounded-2xl bg-white p-3 shadow-xl ring-1 ring-black/5 transition-transform duration-300 hover:scale-105"
                       >
                         <ProductImage
@@ -252,11 +241,11 @@ export default function HomePage() {
                 <p className="mt-1 text-sm text-muted-foreground">
                   {category
                     ? `Mostrando produtos de ${categoryLabel(category)}`
-                    : "Todos os produtos disponíveis na API"}
+                    : "Todos os produtos disponíveis na plataforma"}
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                {!loading && !error && (
+                {!loading && (
                   <span className="whitespace-nowrap text-sm text-muted-foreground">
                     {filtered.length}{" "}
                     {filtered.length === 1 ? "produto" : "produtos"}
@@ -270,14 +259,12 @@ export default function HomePage() {
             </div>
 
             <CategoryFilter
-              categories={categories}
+              categories={categories ?? []}
               active={category}
               onSelect={(value) => setParam("categoria", value)}
             />
 
-            {error ? (
-              <ErrorState message={error} onRetry={load} />
-            ) : loading ? (
+            {loading ? (
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <ProductCardSkeleton key={i} />
@@ -293,17 +280,46 @@ export default function HomePage() {
                     : "Não há produtos nesta categoria. Tente limpar os filtros."
                 }
                 actionLabel={hasFilters ? "Limpar filtros" : "Ver todos"}
-                onAction={hasFilters ? clearFilters : () => setParam("categoria", null)}
+                onAction={
+                  hasFilters ? clearFilters : () => setParam("categoria", null)
+                }
               />
             ) : (
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {filtered.map((product) => (
-                  <ProductCard key={product.id} product={product} />
+                  <ProductCard key={product._id} product={product} />
                 ))}
               </div>
             )}
           </div>
         </section>
+
+        {/* ── Anúncios da comunidade ───────────────────────────── */}
+        {community && community.length > 0 && (
+          <section className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h2 className="font-serif text-2xl font-bold sm:text-3xl">
+                  Anúncios da comunidade
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Produtos cadastrados pelos próprios vendedores do portal.
+                </p>
+              </div>
+              <Button asChild variant="outline" className="rounded-full">
+                <Link to="/anunciar">
+                  <Store className="size-4" />
+                  Anunciar também
+                </Link>
+              </Button>
+            </div>
+            <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {community.map((product) => (
+                <ProductCard key={product._id} product={product} />
+              ))}
+            </div>
+          </section>
+        )}
       </main>
 
       <Footer />

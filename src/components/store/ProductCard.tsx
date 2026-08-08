@@ -26,11 +26,11 @@ export function ProductCard({ product }: { product: Product }) {
     >
       <Card className="group relative flex h-full flex-col overflow-hidden border-border/70 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10">
         <FavoriteButton
-          productId={product.id}
+          productId={product._id}
           className="absolute right-3 top-3 z-10 bg-background/70 backdrop-blur-sm"
         />
         <Link
-          to={`/produto/${product.id}`}
+          to={`/produto/${product._id}`}
           className="block p-4 sm:p-5"
           aria-label={`Ver detalhes de ${product.title}`}
         >
@@ -48,7 +48,7 @@ export function ProductCard({ product }: { product: Product }) {
             {categoryLabel(product.category)}
           </Badge>
           <Link
-            to={`/produto/${product.id}`}
+            to={`/produto/${product._id}`}
             className="line-clamp-2 text-sm font-medium leading-snug text-foreground transition-colors hover:text-primary"
           >
             {product.title}
@@ -66,7 +66,7 @@ export function ProductCard({ product }: { product: Product }) {
                 aria-label="Ver detalhes"
                 className="rounded-full text-muted-foreground"
               >
-                <Link to={`/produto/${product.id}`}>
+                <Link to={`/produto/${product._id}`}>
                   <Eye className="size-4" />
                 </Link>
               </Button>

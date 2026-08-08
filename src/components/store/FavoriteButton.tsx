@@ -5,7 +5,7 @@ import { useFavorites } from "@/context/favorites-context";
 import { cn } from "@/lib/utils";
 
 interface FavoriteButtonProps {
-  productId: number;
+  productId: string;
   className?: string;
   size?: "icon" | "icon-sm" | "icon-lg";
 }

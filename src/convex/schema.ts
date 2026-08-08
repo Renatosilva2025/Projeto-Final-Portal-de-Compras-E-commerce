@@ -16,6 +16,24 @@ export const roleValidator = v.union(
 );
 export type Role = Infer<typeof roleValidator>;
 
+/** Situações de um pedido, do pagamento até a entrega. */
+export const ORDER_STATUS = {
+  PENDING: "pending",
+  PAID: "paid",
+  SHIPPED: "shipped",
+  DELIVERED: "delivered",
+  CANCELLED: "cancelled",
+} as const;
+
+export const orderStatusValidator = v.union(
+  v.literal(ORDER_STATUS.PENDING),
+  v.literal(ORDER_STATUS.PAID),
+  v.literal(ORDER_STATUS.SHIPPED),
+  v.literal(ORDER_STATUS.DELIVERED),
+  v.literal(ORDER_STATUS.CANCELLED),
+);
+export type OrderStatus = Infer<typeof orderStatusValidator>;
+
 const schema = defineSchema(
   {
     // default auth tables using convex auth.
@@ -32,12 +50,62 @@ const schema = defineSchema(
       role: v.optional(roleValidator), // role of the user. do not remove
     }).index("email", ["email"]), // index for the email. do not remove or modify
 
-    // add other tables here
+    /** Produtos do catálogo — semeados da Fake Store API ou criados por usuários. */
+    products: defineTable({
+      title: v.string(),
+      description: v.string(),
+      price: v.number(),
+      category: v.string(),
+      image: v.string(), // URL externa ou storageId do Convex Storage
+      rating: v.object({
+        rate: v.number(),
+        count: v.number(),
+      }),
+      sellerId: v.optional(v.id("users")), // undefined = anúncio semeador da API
+      stock: v.number(),
+      status: v.union(v.literal("active"), v.literal("inactive")),
+    })
+      .index("by_seller", ["sellerId"])
+      .index("by_category", ["category"]),
 
-    // tableName: defineTable({
-    //   ...
-    //   // table fields
-    // }).index("by_field", ["field"])
+    /** Avaliações e comentários dos clientes nos produtos. */
+    reviews: defineTable({
+      productId: v.id("products"),
+      userId: v.id("users"),
+      authorName: v.string(),
+      rating: v.number(), // 1 a 5
+      comment: v.string(),
+    })
+      .index("by_product", ["productId"])
+      .index("by_user", ["userId"]),
+
+    /** Pedidos realizados pelos clientes. */
+    orders: defineTable({
+      userId: v.id("users"),
+      customerName: v.string(),
+      items: v.array(
+        v.object({
+          productId: v.string(),
+          title: v.string(),
+          price: v.number(),
+          quantity: v.number(),
+          image: v.string(),
+        }),
+      ),
+      total: v.number(),
+      status: orderStatusValidator,
+      paymentMethod: v.string(),
+      address: v.object({
+        street: v.string(),
+        number: v.string(),
+        complement: v.optional(v.string()),
+        city: v.string(),
+        state: v.string(),
+        zip: v.string(),
+      }),
+    })
+      .index("by_user", ["userId"])
+      .index("by_status", ["status"]),
   },
   {
     schemaValidation: false,

@@ -1,0 +1,357 @@
+import { useEffect, useState } from "react";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
+import { BadgePlus, ImagePlus, Loader2, Upload, X } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { StoreLayout } from "@/components/layout/StoreLayout";
+import { RequireAuth } from "@/components/RequireAuth";
+import { ErrorState } from "@/components/store/ErrorState";
+import { useAuth } from "@/hooks/use-auth";
+import { PRODUCT_CATEGORIES } from "@/types/product";
+
+function SellForm() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get("editar") as Id<"products"> | null;
+
+  const product = useQuery(
+    api.products.get,
+    editId ? { id: editId } : "skip",
+  );
+
+  const createProduct = useMutation(api.products.create);
+  const updateProduct = useMutation(api.products.update);
+  const generateUploadUrl = useMutation(api.products.generateUploadUrl);
+
+  const [title, setTitle] = useState(product?.title ?? "");
+  const [description, setDescription] = useState(product?.description ?? "");
+  const [category, setCategory] = useState(product?.category ?? "");
+  const [price, setPrice] = useState(product ? String(product.price) : "");
+  const [stock, setStock] = useState(product ? String(product.stock) : "");
+  const [imageUrl, setImageUrl] = useState(product?.image ?? "");
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState(product?.image ?? "");
+  const [submitting, setSubmitting] = useState(false);
+
+  // Ao carregar o produto em modo de edição, preenche o formulário.
+  useEffect(() => {
+    if (product) {
+      setTitle(product.title);
+      setDescription(product.description);
+      setCategory(product.category);
+      setPrice(String(product.price));
+      setStock(String(product.stock));
+      setImageUrl(product.image);
+      setPreview(product.image);
+    }
+  }, [product]);
+
+  const isOwner =
+    product && (product.sellerId === user?._id || user?.role === "admin");
+
+  if (editId && product === undefined) {
+    return (
+      <div className="mx-auto w-full max-w-2xl px-4 py-12 sm:px-6">
+        <Skeleton className="h-8 w-64 rounded-lg" />
+        <Skeleton className="mt-6 h-96 w-full rounded-2xl" />
+      </div>
+    );
+  }
+
+  if (editId && (!product || !isOwner)) {
+    return (
+      <div className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6">
+        <ErrorState
+          message="Você não tem permissão para editar este anúncio."
+          onRetry={() => navigate("/conta?aba=anuncios")}
+        />
+      </div>
+    );
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (!selected) return;
+    setFile(selected);
+    setPreview(URL.createObjectURL(selected));
+    setImageUrl("");
+  };
+
+  const handleUrlChange = (value: string) => {
+    setImageUrl(value);
+    setPreview(value);
+    setFile(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!title.trim() || !description.trim()) {
+      toast.error("Preencha título e descrição do anúncio.");
+      return;
+    }
+    const parsedPrice = Number.parseFloat(price.replace(",", "."));
+    if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+      toast.error("Informe um preço válido.");
+      return;
+    }
+    const parsedStock = Number.parseInt(stock || "0", 10);
+    if (Number.isNaN(parsedStock) || parsedStock < 0) {
+      toast.error("Informe um estoque válido.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      let finalImage = imageUrl;
+
+      if (file) {
+        const uploadUrl = await generateUploadUrl();
+        const response = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
+        if (!response.ok) throw new Error("Não foi possível enviar a imagem.");
+        const { storageId } = (await response.json()) as { storageId: string };
+        finalImage = storageId;
+      }
+
+      if (!finalImage) {
+        throw new Error("Adicione uma imagem ao anúncio.");
+      }
+
+      const args = {
+        title: title.trim(),
+        description: description.trim(),
+        price: parsedPrice,
+        category,
+        image: finalImage,
+        stock: parsedStock,
+      };
+
+      if (editId && product) {
+        await updateProduct({ id: editId, ...args });
+        toast.success("Anúncio atualizado com sucesso!");
+        navigate(`/produto/${editId}`);
+      } else {
+        const newId = await createProduct(args);
+        toast.success("Anúncio publicado! Ele já aparece no catálogo.");
+        navigate(`/produto/${newId}`);
+      }
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Não foi possível salvar o anúncio.",
+      );
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6">
+      <h1 className="font-serif text-3xl font-bold sm:text-4xl">
+        {editId ? "Editar anúncio" : "Anunciar produto"}
+      </h1>
+      <p className="mt-1 text-sm text-muted-foreground">
+        {editId
+          ? "Atualize as informações do seu produto e salve as alterações."
+          : "Cadastre um produto para vender no portal — sem taxas, direto para a vitrine."}
+      </p>
+
+      <form
+        onSubmit={handleSubmit}
+        className="mt-8 space-y-6 rounded-2xl border border-border/70 bg-card p-6"
+      >
+        {/* Imagem */}
+        <div>
+          <Label className="mb-2 block">Imagem do produto</Label>
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <div className="flex size-40 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-dashed border-border bg-muted/40">
+              {preview ? (
+                <img
+                  src={preview}
+                  alt="Prévia do anúncio"
+                  className="h-full w-full object-contain"
+                />
+              ) : (
+                <span className="flex flex-col items-center gap-2 text-xs text-muted-foreground">
+                  <ImagePlus className="size-6" />
+                  Sem imagem
+                </span>
+              )}
+            </div>
+            <div className="flex-1 space-y-3">
+              <label
+                className="flex cursor-pointer items-center justify-center gap-2 rounded-full border border-dashed border-border px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
+              >
+                <Upload className="size-4" />
+                {file ? file.name : "Enviar imagem do computador"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+              </label>
+              {file && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-full text-muted-foreground"
+                  onClick={() => {
+                    setFile(null);
+                    setPreview(imageUrl);
+                  }}
+                >
+                  <X className="size-4" />
+                  Remover arquivo
+                </Button>
+              )}
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="h-px flex-1 bg-border" />
+                ou use um link
+                <span className="h-px flex-1 bg-border" />
+              </div>
+              <Input
+                value={imageUrl}
+                onChange={(e) => handleUrlChange(e.target.value)}
+                placeholder="https://exemplo.com/imagem.jpg"
+                className="rounded-full"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Dados */}
+        <div>
+          <Label htmlFor="sell-title" className="mb-2 block">
+            Título
+          </Label>
+          <Input
+            id="sell-title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Ex.: Capa de celular para iPhone 15 Pro"
+            maxLength={120}
+            required
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="sell-description" className="mb-2 block">
+            Descrição
+          </Label>
+          <Textarea
+            id="sell-description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Descreva o produto: estado, material, compatibilidade, diferenciais…"
+            rows={5}
+            maxLength={1000}
+            required
+          />
+        </div>
+
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div>
+            <Label className="mb-2 block">Categoria</Label>
+            <Select value={category} onValueChange={setCategory} required>
+              <SelectTrigger>
+                <SelectValue placeholder="Escolha a categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                {PRODUCT_CATEGORIES.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="sell-price" className="mb-2 block">
+              Preço (US$)
+            </Label>
+            <Input
+              id="sell-price"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="0.00"
+              inputMode="decimal"
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="sell-stock" className="mb-2 block">
+              Estoque (unidades)
+            </Label>
+            <Input
+              id="sell-stock"
+              value={stock}
+              onChange={(e) => setStock(e.target.value)}
+              placeholder="10"
+              inputMode="numeric"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-3 pt-2">
+          <Button
+            type="submit"
+            size="lg"
+            className="rounded-full"
+            disabled={submitting}
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                Salvando…
+              </>
+            ) : (
+              <>
+                <BadgePlus className="size-4" />
+                {editId ? "Salvar alterações" : "Publicar anúncio"}
+              </>
+            )}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="rounded-full"
+            onClick={() =>
+              navigate(editId ? "/conta?aba=anuncios" : "/")
+            }
+          >
+            Cancelar
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+export default function SellPage() {
+  return (
+    <RequireAuth>
+      <StoreLayout>
+        <SellForm />
+      </StoreLayout>
+    </RequireAuth>
+  );
+}

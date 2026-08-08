@@ -81,11 +81,11 @@ export function CartDrawer() {
                 <ul className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
                   {items.map(({ product, quantity }) => (
                     <li
-                      key={product.id}
+                      key={product._id}
                       className="flex gap-3 rounded-xl border border-border/70 p-3"
                     >
                       <Link
-                        to={`/produto/${product.id}`}
+                        to={`/produto/${product._id}`}
                         onClick={closeCart}
                         className="shrink-0"
                       >
@@ -98,7 +98,7 @@ export function CartDrawer() {
                       <div className="flex min-w-0 flex-1 flex-col gap-1">
                         <div className="flex items-start justify-between gap-2">
                           <Link
-                            to={`/produto/${product.id}`}
+                            to={`/produto/${product._id}`}
                             onClick={closeCart}
                             className="line-clamp-2 text-xs font-medium leading-snug hover:text-primary"
                           >
@@ -108,7 +108,7 @@ export function CartDrawer() {
                             type="button"
                             variant="ghost"
                             size="icon-sm"
-                            onClick={() => removeItem(product.id)}
+                            onClick={() => removeItem(product._id)}
                             aria-label={`Remover ${product.title}`}
                             className="-mr-1 -mt-1 shrink-0 rounded-full text-muted-foreground hover:text-destructive"
                           >
@@ -118,7 +118,7 @@ export function CartDrawer() {
                         <div className="mt-auto flex items-center justify-between">
                           <QuantityStepper
                             value={quantity}
-                            onChange={(q) => setQuantity(product.id, q)}
+                            onChange={(q) => setQuantity(product._id, q)}
                             className="scale-90 origin-left"
                           />
                           <span className="text-sm font-bold tabular-nums">

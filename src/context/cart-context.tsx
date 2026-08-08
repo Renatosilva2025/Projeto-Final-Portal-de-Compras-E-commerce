@@ -14,8 +14,8 @@ interface CartContextValue {
   openCart: () => void;
   closeCart: () => void;
   addItem: (product: Product, quantity?: number) => void;
-  removeItem: (productId: number) => void;
-  setQuantity: (productId: number, quantity: number) => void;
+  removeItem: (productId: string) => void;
+  setQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
 }
 
@@ -27,7 +27,7 @@ const CartContext = createContext<CartContextValue | null>(null);
  */
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useLocalStorage<CartItem[]>(
-    "vitrine:carrinho",
+    "portal:carrinho",
     [],
   );
   const [isOpen, setIsOpen] = useState(false);
@@ -38,10 +38,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const addItem = useCallback(
     (product: Product, quantity = 1) => {
       setItems((prev) => {
-        const existing = prev.find((item) => item.product.id === product.id);
+        const existing = prev.find((item) => item.product._id === product._id);
         if (existing) {
           return prev.map((item) =>
-            item.product.id === product.id
+            item.product._id === product._id
               ? { ...item, quantity: Math.min(99, item.quantity + quantity) }
               : item,
           );
@@ -59,20 +59,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
 
   const removeItem = useCallback(
-    (productId: number) => {
-      setItems((prev) => prev.filter((item) => item.product.id !== productId));
+    (productId: string) => {
+      setItems((prev) => prev.filter((item) => item.product._id !== productId));
       toast.info("Item removido do carrinho");
     },
     [setItems],
   );
 
   const setQuantity = useCallback(
-    (productId: number, quantity: number) => {
+    (productId: string, quantity: number) => {
       setItems((prev) =>
         quantity <= 0
-          ? prev.filter((item) => item.product.id !== productId)
+          ? prev.filter((item) => item.product._id !== productId)
           : prev.map((item) =>
-              item.product.id === productId
+              item.product._id === productId
                 ? { ...item, quantity: Math.min(99, quantity) }
                 : item,
             ),

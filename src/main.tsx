@@ -7,6 +7,8 @@ import { ThemeProvider } from "next-themes";
 import React, { StrictMode, useEffect, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
+import { AuthBootstrap } from "@/components/AuthBootstrap";
+import { CatalogBootstrap } from "@/components/CatalogBootstrap";
 import { CartProvider } from "@/context/cart-context";
 import { FavoritesProvider } from "@/context/favorites-context";
 import "./index.css";
@@ -16,6 +18,11 @@ const HomePage = lazy(() => import("./pages/HomePage.tsx"));
 const ProductPage = lazy(() => import("./pages/ProductPage.tsx"));
 const CartPage = lazy(() => import("./pages/CartPage.tsx"));
 const FavoritesPage = lazy(() => import("./pages/FavoritesPage.tsx"));
+const CheckoutPage = lazy(() => import("./pages/CheckoutPage.tsx"));
+const OrderPage = lazy(() => import("./pages/OrderPage.tsx"));
+const AccountPage = lazy(() => import("./pages/AccountPage.tsx"));
+const SellPage = lazy(() => import("./pages/SellPage.tsx"));
+const AdminPage = lazy(() => import("./pages/AdminPage.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
@@ -125,6 +132,8 @@ createRoot(document.getElementById("root")!).render(
         disableTransitionOnChange
       >
         <ConvexAuthProvider client={convex}>
+          <AuthBootstrap />
+          <CatalogBootstrap />
           <BrowserRouter>
             <RouteSyncer />
             <CartProvider>
@@ -135,9 +144,14 @@ createRoot(document.getElementById("root")!).render(
                     <Route path="/produto/:id" element={<ProductPage />} />
                     <Route path="/carrinho" element={<CartPage />} />
                     <Route path="/favoritos" element={<FavoritesPage />} />
+                    <Route path="/checkout" element={<CheckoutPage />} />
+                    <Route path="/pedido/:id" element={<OrderPage />} />
+                    <Route path="/conta" element={<AccountPage />} />
+                    <Route path="/anunciar" element={<SellPage />} />
+                    <Route path="/admin" element={<AdminPage />} />
                     <Route
                       path="/auth"
-                      element={<AuthPage redirectAfterAuth="/" />}
+                      element={<AuthPage redirectAfterAuth="/conta" />}
                     />
                     <Route path="*" element={<NotFound />} />
                   </Routes>

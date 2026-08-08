@@ -1,18 +1,5 @@
-import { useState } from "react";
 import { CreditCard, ShoppingCart, Trash2 } from "lucide-react";
 import { Link, useNavigate } from "react-router";
-import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { StoreLayout } from "@/components/layout/StoreLayout";
 import { EmptyState } from "@/components/store/EmptyState";
@@ -24,17 +11,8 @@ import { categoryLabel } from "@/types/product";
 
 /** Página do carrinho: quantidades, remoção e total em tempo real. */
 export default function CartPage() {
-  const { items, subtotal, count, setQuantity, removeItem, clearCart } =
-    useCart();
+  const { items, subtotal, count, setQuantity, removeItem } = useCart();
   const navigate = useNavigate();
-  const [confirmOpen, setConfirmOpen] = useState(false);
-
-  const handleCheckout = () => {
-    clearCart();
-    setConfirmOpen(false);
-    toast.success("Pedido confirmado! Obrigado pela compra. 🎉");
-    navigate("/");
-  };
 
   return (
     <StoreLayout>
@@ -62,11 +40,11 @@ export default function CartPage() {
             <ul className="space-y-4">
               {items.map(({ product, quantity }) => (
                 <li
-                  key={product.id}
+                  key={product._id}
                   className="flex flex-wrap gap-4 rounded-2xl border border-border/70 bg-card p-4 sm:flex-nowrap sm:items-center"
                 >
                   <Link
-                    to={`/produto/${product.id}`}
+                    to={`/produto/${product._id}`}
                     className="shrink-0"
                     aria-label={`Ver ${product.title}`}
                   >
@@ -79,7 +57,7 @@ export default function CartPage() {
 
                   <div className="min-w-0 flex-1">
                     <Link
-                      to={`/produto/${product.id}`}
+                      to={`/produto/${product._id}`}
                       className="line-clamp-2 font-medium leading-snug transition-colors hover:text-primary"
                     >
                       {product.title}
@@ -98,7 +76,7 @@ export default function CartPage() {
                   <div className="flex w-full items-center justify-between gap-4 sm:w-auto sm:flex-col sm:items-end">
                     <QuantityStepper
                       value={quantity}
-                      onChange={(q) => setQuantity(product.id, q)}
+                      onChange={(q) => setQuantity(product._id, q)}
                     />
                     <div className="flex items-center gap-2">
                       <span className="font-bold tabular-nums">
@@ -108,7 +86,7 @@ export default function CartPage() {
                         type="button"
                         variant="ghost"
                         size="icon-sm"
-                        onClick={() => removeItem(product.id)}
+                        onClick={() => removeItem(product._id)}
                         aria-label={`Remover ${product.title} do carrinho`}
                         className="rounded-full text-muted-foreground hover:text-destructive"
                       >
@@ -144,34 +122,17 @@ export default function CartPage() {
                 </div>
               </dl>
 
-              <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-                <AlertDialogTrigger asChild>
-                  <Button size="lg" className="mt-5 w-full rounded-full">
-                    <CreditCard className="size-4" />
-                    Finalizar compra
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Confirmar pedido?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Você está prestes a concluir um pedido de {count}{" "}
-                      {count === 1 ? "item" : "itens"} no valor total de{" "}
-                      <strong>{formatPrice(subtotal)}</strong>. Esta é uma
-                      compra simulada — nenhum pagamento será realizado.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleCheckout}>
-                      Confirmar pedido
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <Button
+                size="lg"
+                className="mt-5 w-full rounded-full"
+                onClick={() => navigate("/checkout")}
+              >
+                <CreditCard className="size-4" />
+                Finalizar compra
+              </Button>
 
               <p className="mt-3 text-center text-xs text-muted-foreground">
-                Pagamento seguro · Compra simulada
+                Você fará login para confirmar o pedido · Compra simulada
               </p>
             </aside>
           </div>

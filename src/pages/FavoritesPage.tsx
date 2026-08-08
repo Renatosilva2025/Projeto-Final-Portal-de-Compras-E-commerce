@@ -1,46 +1,22 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { Heart, HeartOff } from "lucide-react";
 import { useNavigate } from "react-router";
 import { StoreLayout } from "@/components/layout/StoreLayout";
 import { EmptyState } from "@/components/store/EmptyState";
-import { ErrorState } from "@/components/store/ErrorState";
 import { ProductCard } from "@/components/store/ProductCard";
 import { ProductCardSkeleton } from "@/components/store/ProductCardSkeleton";
 import { useFavorites } from "@/context/favorites-context";
-import { fetchProducts } from "@/services/api";
-import type { Product } from "@/types/product";
 
 /** Página de favoritos — produtos salvos no navegador. */
 export default function FavoritesPage() {
   const { favoriteIds } = useFavorites();
   const navigate = useNavigate();
-
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setProducts(await fetchProducts());
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Erro inesperado ao carregar os produtos.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const products = useQuery(api.products.list, {});
 
   const favorites = useMemo(
-    () => products.filter((p) => favoriteIds.includes(p.id)),
+    () => (products ?? []).filter((p) => favoriteIds.includes(p._id)),
     [products, favoriteIds],
   );
 
@@ -60,9 +36,7 @@ export default function FavoritesPage() {
         </p>
 
         <div className="mt-8">
-          {error ? (
-            <ErrorState message={error} onRetry={load} />
-          ) : loading ? (
+          {products === undefined ? (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {Array.from({ length: 4 }).map((_, i) => (
                 <ProductCardSkeleton key={i} />
@@ -79,7 +53,7 @@ export default function FavoritesPage() {
           ) : (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {favorites.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <ProductCard key={product._id} product={product} />
               ))}
             </div>
           )}

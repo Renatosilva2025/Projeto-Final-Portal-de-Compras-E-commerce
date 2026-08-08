@@ -180,59 +180,60 @@ export default function HomePage() {
               <div className="absolute left-1/2 top-1/2 size-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/15 blur-3xl" />
               <div className="absolute left-1/2 top-1/2 size-52 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-dashed border-primary/30" />
 
-              {heroProducts
-                ? heroProducts.map((product, i) => {
-                    const position = [
-                      "left-6 top-20 -rotate-6",
-                      "left-1/2 top-4 z-10 -translate-x-1/2 rotate-2",
-                      "right-6 top-28 rotate-6",
-                    ][i];
-                    return (
-                      <motion.div
-                        key={product.id}
-                        className={`absolute w-36 ${position}`}
-                        initial={{ opacity: 0, y: 28 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{
-                          delay: 0.15 + i * 0.12,
-                          duration: 0.5,
-                          ease: "easeOut",
-                        }}
-                      >
-                        <Link
-                          to={`/produto/${product.id}`}
-                          className="block rounded-2xl bg-white p-3 shadow-xl ring-1 ring-black/5 transition-transform duration-300 hover:scale-105"
-                        >
-                          <ProductImage
-                            src={product.image}
-                            alt={product.title}
-                            className="aspect-square w-full rounded-xl"
-                          />
-                          <p className="mt-2 line-clamp-1 text-[11px] font-medium text-neutral-700">
-                            {product.title}
-                          </p>
-                          <p className="text-sm font-bold text-neutral-900">
-                            {formatPrice(product.price)}
-                          </p>
-                        </Link>
-                      </motion.div>
-                    );
-                  })
-                : loading &&
-                  [0, 1, 2].map((i) => (
-                    <div
-                      key={i}
-                      className={`absolute w-36 ${
-                        [
-                          "left-6 top-20 -rotate-6",
-                          "left-1/2 top-4 z-10 -translate-x-1/2 rotate-2",
-                          "right-6 top-28 rotate-6",
-                        ][i]
-                      }`}
+              {heroProducts ? (
+                heroProducts.map((product, i) => {
+                  const position = [
+                    "left-6 top-20 -rotate-6",
+                    "left-1/2 top-4 z-10 -translate-x-1/2 rotate-2",
+                    "right-6 top-28 rotate-6",
+                  ][i];
+                  return (
+                    <motion.div
+                      key={product.id}
+                      className={`absolute w-36 ${position}`}
+                      initial={{ opacity: 0, y: 28 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{
+                        delay: 0.15 + i * 0.12,
+                        duration: 0.5,
+                        ease: "easeOut",
+                      }}
                     >
-                      <Skeleton className="aspect-square w-full rounded-2xl bg-white/60" />
-                    </div>
-                  ))}
+                      <Link
+                        to={`/produto/${product.id}`}
+                        className="block rounded-2xl bg-white p-3 shadow-xl ring-1 ring-black/5 transition-transform duration-300 hover:scale-105"
+                      >
+                        <ProductImage
+                          src={product.image}
+                          alt={product.title}
+                          className="aspect-square w-full rounded-xl"
+                        />
+                        <p className="mt-2 line-clamp-1 text-[11px] font-medium text-neutral-700">
+                          {product.title}
+                        </p>
+                        <p className="text-sm font-bold text-neutral-900">
+                          {formatPrice(product.price)}
+                        </p>
+                      </Link>
+                    </motion.div>
+                  );
+                })
+              ) : loading ? (
+                [0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className={`absolute w-36 ${
+                      [
+                        "left-6 top-20 -rotate-6",
+                        "left-1/2 top-4 z-10 -translate-x-1/2 rotate-2",
+                        "right-6 top-28 rotate-6",
+                      ][i]
+                    }`}
+                  >
+                    <Skeleton className="aspect-square w-full rounded-2xl bg-white/60" />
+                  </div>
+                ))
+              ) : null}
             </div>
           </div>
         </section>

@@ -149,7 +149,7 @@ export default function HomePage() {
                     label: "Produtos na vitrine",
                   },
                   { value: `${categories?.length ?? "—"}`, label: "Categorias" },
-                  { value: "US$", label: "Preços reais da API" },
+                  { value: "R$", label: "Preços em reais" },
                 ].map((stat) => (
                   <div key={stat.label}>
                     <dt className="sr-only">{stat.label}</dt>

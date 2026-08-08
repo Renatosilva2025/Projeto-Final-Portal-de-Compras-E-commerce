@@ -357,6 +357,10 @@ export const seed = action({
     const count = await ctx.runQuery(internal.products.countInternal);
     if (count > 0) return { inserted: 0 };
 
+    // A Fake Store API entrega preços em dólares; converte para reais
+    // aproximados para o catálogo do portal.
+    const toBrl = (usd: number) => Math.round(usd * 5.2 * 100) / 100;
+
     const products: Array<{
       title: string;
       description: string;
@@ -369,7 +373,7 @@ export const seed = action({
     }> = CURATED_PRODUCTS.map((p) => ({
       title: p.title,
       description: p.description,
-      price: p.price,
+      price: toBrl(p.price),
       category: p.category,
       image: p.image,
       rating: { rate: 0, count: 0 },
@@ -393,7 +397,7 @@ export const seed = action({
         products.push({
           title: p.title,
           description: p.description,
-          price: p.price,
+          price: toBrl(p.price),
           category: FAKE_CATEGORY_MAP[p.category] ?? p.category,
           image: p.image,
           rating: {

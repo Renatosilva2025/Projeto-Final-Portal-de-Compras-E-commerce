@@ -5,6 +5,9 @@ compras completo de eletrônicos e acessórios (capas de celular, carregadores,
 notebooks, fones, smartphones…), no estilo de um marketplace como Shopee ou
 AliExpress, com preços em **reais (R$)**.
 
+> 📄 Veja também a **[Apresentação do projeto](APRESENTACAO.md)** — resumo
+> pronto para compartilhar com a banca/professor.
+
 ## 📋 Descrição do projeto
 
 O **Portal de Compras PD** é um marketplace completo: catálogo de produtos com

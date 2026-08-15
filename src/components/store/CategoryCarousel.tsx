@@ -16,6 +16,8 @@ interface CategoryCarouselProps {
   category: string;
   products: Product[];
   onViewAll: (category: string) => void;
+  /** Id da âncora usado pelo menu "Ir para" da vitrine. */
+  anchorId?: string;
 }
 
 /** Carrossel horizontal com os produtos de uma categoria (estilo marketplace). */
@@ -23,6 +25,7 @@ export function CategoryCarousel({
   category,
   products,
   onViewAll,
+  anchorId,
 }: CategoryCarouselProps) {
   const [api, setApi] = useState<CarouselApi>();
   const [canPrev, setCanPrev] = useState(false);
@@ -49,7 +52,8 @@ export function CategoryCarousel({
     <Carousel
       setApi={setApi}
       opts={{ align: "start", dragFree: true }}
-      className="w-full"
+      className="w-full scroll-mt-24"
+      id={anchorId}
     >
       <div className="mb-4 flex items-end justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">

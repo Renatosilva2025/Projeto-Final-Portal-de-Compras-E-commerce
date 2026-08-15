@@ -8,6 +8,7 @@ import {
   PackageSearch,
   SearchX,
   Store,
+  Tag,
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ import {
   type SortOption,
 } from "@/components/store/SortSelect";
 import { formatPrice } from "@/lib/format";
+import { CATEGORY_ICONS } from "@/components/store/category-icons";
 import { categoryLabel } from "@/types/product";
 import type { Product } from "@/types/product";
 
@@ -99,6 +101,15 @@ export default function HomePage() {
 
   /** Modo vitrine: sem busca, categoria ou ordenação → carrosséis por categoria. */
   const browseMode = !category && !q && sort === "relevance";
+
+  /** Slug sem acentos usado nas âncoras dos carrosséis. */
+  const categorySlug = (value: string) =>
+    value
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -288,11 +299,37 @@ export default function HomePage() {
             />
 
             {loading ? (
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <ProductCardSkeleton key={i} />
-                ))}
-              </div>
+              browseMode ? (
+                <div className="flex flex-col gap-12">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i}>
+                      <div className="mb-4 flex items-center gap-3">
+                        <Skeleton className="size-10 rounded-xl" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-6 w-44" />
+                          <Skeleton className="h-3 w-24" />
+                        </div>
+                      </div>
+                      <div className="flex gap-5 overflow-hidden">
+                        {Array.from({ length: 5 }).map((_, j) => (
+                          <div
+                            key={j}
+                            className="w-1/2 shrink-0 sm:w-1/3 lg:w-1/4 xl:w-1/5"
+                          >
+                            <ProductCardSkeleton />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <ProductCardSkeleton key={i} />
+                  ))}
+                </div>
+              )
             ) : filtered.length === 0 ? (
               <EmptyState
                 icon={SearchX}
@@ -311,6 +348,30 @@ export default function HomePage() {
               />
             ) : browseMode ? (
               <div className="flex flex-col gap-12">
+                {(categories ?? []).length > 0 && (
+                  <nav
+                    aria-label="Navegar por categoria"
+                    className="flex flex-wrap items-center gap-2"
+                  >
+                    <span className="mr-1 text-sm font-medium text-muted-foreground">
+                      Ir para:
+                    </span>
+                    {(categories ?? []).map((cat) => {
+                      const Icon = CATEGORY_ICONS[cat.toLowerCase()] ?? Tag;
+                      return (
+                        <a
+                          key={cat}
+                          href={`#cat-${categorySlug(cat)}`}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
+                        >
+                          <Icon className="size-3.5" />
+                          {categoryLabel(cat)}
+                        </a>
+                      );
+                    })}
+                  </nav>
+                )}
+
                 {(categories ?? []).map((cat) => {
                   const items = byCategory.get(cat) ?? [];
                   if (items.length === 0) return null;
@@ -319,6 +380,7 @@ export default function HomePage() {
                       key={cat}
                       category={cat}
                       products={items}
+                      anchorId={`cat-${categorySlug(cat)}`}
                       onViewAll={(value) => setParam("categoria", value)}
                     />
                   );

@@ -9,12 +9,13 @@ import {
   SearchX,
   Store,
 } from "lucide-react";
-import { Link, useSearchParams } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { CartDrawer } from "@/components/store/CartDrawer";
+import { CategoryCarousel } from "@/components/store/CategoryCarousel";
 import { CategoryFilter } from "@/components/store/CategoryFilter";
 import { EmptyState } from "@/components/store/EmptyState";
 import { ProductCard } from "@/components/store/ProductCard";
@@ -27,9 +28,11 @@ import {
 } from "@/components/store/SortSelect";
 import { formatPrice } from "@/lib/format";
 import { categoryLabel } from "@/types/product";
+import type { Product } from "@/types/product";
 
 /** Página inicial: hero + catálogo completo com filtros, busca e ordenação. */
 export default function HomePage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const category = searchParams.get("categoria");
   const q = searchParams.get("q") ?? "";
@@ -82,6 +85,20 @@ export default function HomePage() {
 
   const hasFilters = Boolean(category || q || sort !== "relevance");
   const heroProducts = (allProducts ?? []).slice(0, 3);
+
+  /** Agrupa todos os produtos por categoria para os carrosséis. */
+  const byCategory = useMemo(() => {
+    const map = new Map<string, Product[]>();
+    for (const product of allProducts ?? []) {
+      const list = map.get(product.category);
+      if (list) list.push(product);
+      else map.set(product.category, [product]);
+    }
+    return map;
+  }, [allProducts]);
+
+  /** Modo vitrine: sem busca, categoria ou ordenação → carrosséis por categoria. */
+  const browseMode = !category && !q && sort === "relevance";
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -239,23 +256,29 @@ export default function HomePage() {
                   Catálogo
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {category
-                    ? `Mostrando produtos de ${categoryLabel(category)}`
-                    : "Todos os produtos disponíveis na plataforma"}
+                  {browseMode
+                    ? "Navegue por categoria e deslize para ver mais produtos."
+                    : category
+                      ? `Mostrando produtos de ${categoryLabel(category)}`
+                      : q
+                        ? `Resultados para "${q}"`
+                        : "Todos os produtos ordenados"}
                 </p>
               </div>
-              <div className="flex items-center gap-3">
-                {!loading && (
-                  <span className="whitespace-nowrap text-sm text-muted-foreground">
-                    {filtered.length}{" "}
-                    {filtered.length === 1 ? "produto" : "produtos"}
-                  </span>
-                )}
-                <SortSelect
-                  value={sort}
-                  onChange={(value) => setParam("ordem", value)}
-                />
-              </div>
+              {!browseMode && (
+                <div className="flex items-center gap-3">
+                  {!loading && (
+                    <span className="whitespace-nowrap text-sm text-muted-foreground">
+                      {filtered.length}{" "}
+                      {filtered.length === 1 ? "produto" : "produtos"}
+                    </span>
+                  )}
+                  <SortSelect
+                    value={sort}
+                    onChange={(value) => setParam("ordem", value)}
+                  />
+                </div>
+              )}
             </div>
 
             <CategoryFilter
@@ -277,13 +300,30 @@ export default function HomePage() {
                 description={
                   q
                     ? `Não encontramos resultados para "${q}". Tente outro termo.`
-                    : "Não há produtos nesta categoria. Tente limpar os filtros."
+                    : browseMode
+                      ? "O catálogo está vazio por enquanto. Seja o primeiro a anunciar um produto."
+                      : "Não há produtos nesta categoria. Tente limpar os filtros."
                 }
-                actionLabel={hasFilters ? "Limpar filtros" : "Ver todos"}
+                actionLabel={hasFilters ? "Limpar filtros" : "Anunciar produto"}
                 onAction={
-                  hasFilters ? clearFilters : () => setParam("categoria", null)
+                  hasFilters ? clearFilters : () => navigate("/anunciar")
                 }
               />
+            ) : browseMode ? (
+              <div className="flex flex-col gap-12">
+                {(categories ?? []).map((cat) => {
+                  const items = byCategory.get(cat) ?? [];
+                  if (items.length === 0) return null;
+                  return (
+                    <CategoryCarousel
+                      key={cat}
+                      category={cat}
+                      products={items}
+                      onViewAll={(value) => setParam("categoria", value)}
+                    />
+                  );
+                })}
+              </div>
             ) : (
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {filtered.map((product) => (

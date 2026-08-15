@@ -1,34 +1,7 @@
-import {
-  Cable,
-  Cpu,
-  Gem,
-  Headphones,
-  Home,
-  Laptop,
-  Shirt,
-  Smartphone,
-  Tablet,
-  Tag,
-  type LucideIcon,
-} from "lucide-react";
+import { Tag, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { categoryLabel } from "@/types/product";
-
-const CATEGORY_ICONS: Record<string, LucideIcon> = {
-  "acessórios para celular": Smartphone,
-  "carregadores e cabos": Cable,
-  "notebooks e computadores": Laptop,
-  "áudio e fones de ouvido": Headphones,
-  "smartphones e tablets": Tablet,
-  "eletrônicos e gadgets": Cpu,
-  "moda e acessórios": Shirt,
-  "casa e decoração": Home,
-  // categorias legadas da Fake Store API
-  electronics: Cpu,
-  jewelery: Gem,
-  "men's clothing": Shirt,
-  "women's clothing": Shirt,
-};
+import { CATEGORY_ICONS } from "./category-icons";
 
 interface CategoryFilterProps {
   categories: string[];

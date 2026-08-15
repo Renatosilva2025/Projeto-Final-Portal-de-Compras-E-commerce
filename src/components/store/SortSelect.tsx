@@ -9,6 +9,8 @@ import {
 
 export const SORT_OPTIONS = [
   { value: "relevance", label: "Relevância" },
+  { value: "name-asc", label: "Nome (A–Z)" },
+  { value: "name-desc", label: "Nome (Z–A)" },
   { value: "price-asc", label: "Menor preço" },
   { value: "price-desc", label: "Maior preço" },
   { value: "rating-desc", label: "Melhor avaliados" },

@@ -1,6 +1,11 @@
 import { AnimatePresence, motion } from "framer-motion";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import {
   BadgePlus,
+  Bell,
+  CheckCheck,
   Heart,
   LayoutDashboard,
   LogOut,
@@ -25,7 +30,9 @@ import {
 import { SearchBar } from "@/components/store/SearchBar";
 import { useAuth } from "@/hooks/use-auth";
 import { useCart } from "@/context/cart-context";
+import { useFavorites } from "@/context/favorites-context";
 import { cn } from "@/lib/utils";
+import { formatDate } from "@/lib/format";
 import { Logo } from "./Logo";
 
 const NAV_LINKS = [
@@ -43,14 +50,36 @@ function userInitials(name?: string, email?: string) {
   return initials || "U";
 }
 
-/** Cabeçalho fixo com busca, menu de conta, alternador de tema e carrinho. */
+/** Cabeçalho fixo com busca, favoritos, notificações, menu de conta e carrinho. */
 export function Header() {
   const { count, openCart } = useCart();
+  const { favoriteIds } = useFavorites();
   const { resolvedTheme, setTheme } = useTheme();
   const { isAuthenticated, user, signOut } = useAuth();
   const navigate = useNavigate();
   const isDark = resolvedTheme === "dark";
   const isAdmin = user?.role === "admin";
+  const favoritesCount = favoriteIds.length;
+
+  const notifications = useQuery(
+    api.notifications.listMine,
+    isAuthenticated ? {} : "skip",
+  );
+  const markAllRead = useMutation(api.notifications.markAllRead);
+  const markRead = useMutation(api.notifications.markRead);
+  const unreadCount = notifications?.filter((n) => !n.read).length ?? 0;
+
+  const handleNotificationClick = async (
+    id: Id<"notifications">,
+    link?: string,
+  ) => {
+    try {
+      await markRead({ id });
+    } catch {
+      // segue mesmo se falhar
+    }
+    if (link) navigate(link);
+  };
 
   const handleSignOut = async () => {
     try {
@@ -75,7 +104,7 @@ export function Header() {
                 end={link.end}
                 className={({ isActive }) =>
                   cn(
-                    "rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
+                    "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
                     isActive
                       ? "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -83,6 +112,11 @@ export function Header() {
                 }
               >
                 {link.label}
+                {link.to === "/favoritos" && favoritesCount > 0 && (
+                  <span className="flex size-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                    {favoritesCount > 99 ? "99+" : favoritesCount}
+                  </span>
+                )}
               </NavLink>
             ))}
             {isAuthenticated && (
@@ -151,12 +185,100 @@ export function Header() {
               variant="ghost"
               size="icon"
               aria-label="Ver favoritos"
-              className="rounded-full text-muted-foreground md:hidden"
+              className="relative rounded-full text-muted-foreground md:hidden"
             >
               <Link to="/favoritos">
                 <Heart className="size-5" />
+                {favoritesCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow">
+                    {favoritesCount > 99 ? "99+" : favoritesCount}
+                  </span>
+                )}
               </Link>
             </Button>
+
+            {isAuthenticated && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Notificações${
+                      unreadCount > 0 ? ` (${unreadCount} não lidas)` : ""
+                    }`}
+                    className="relative rounded-full text-muted-foreground"
+                  >
+                    <Bell className="size-5" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground shadow">
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-80">
+                  <DropdownMenuLabel className="flex items-center justify-between">
+                    <span className="font-semibold">Notificações</span>
+                    {unreadCount > 0 && (
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                        {unreadCount} não lidas
+                      </span>
+                    )}
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {notifications === undefined ? (
+                    <div className="space-y-2 p-4">
+                      <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
+                      <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
+                    </div>
+                  ) : notifications.length === 0 ? (
+                    <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+                      Nenhuma notificação por enquanto.
+                    </p>
+                  ) : (
+                    <div className="max-h-80 overflow-y-auto">
+                      {notifications.slice(0, 12).map((n) => (
+                        <button
+                          key={n._id}
+                          type="button"
+                          onClick={() => handleNotificationClick(n._id, n.link)}
+                          className={cn(
+                            "flex w-full flex-col gap-0.5 px-4 py-3 text-left transition-colors hover:bg-accent",
+                            !n.read && "bg-primary/5",
+                          )}
+                        >
+                          <span className="flex items-center gap-2 text-sm font-semibold">
+                            {!n.read && (
+                              <span className="size-2 shrink-0 rounded-full bg-primary" />
+                            )}
+                            {n.title}
+                          </span>
+                          <span className="line-clamp-2 pl-4 text-xs text-muted-foreground">
+                            {n.body}
+                          </span>
+                          <span className="pl-4 text-[10px] text-muted-foreground/70">
+                            {formatDate(n._creationTime)}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {unreadCount > 0 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => markAllRead()}
+                        className="cursor-pointer"
+                      >
+                        <CheckCheck className="mr-2 size-4" />
+                        Marcar todas como lidas
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
 
             <Button
               type="button"

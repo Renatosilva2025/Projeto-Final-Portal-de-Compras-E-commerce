@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Eye, Plus } from "lucide-react";
 import { Link } from "react-router";
@@ -6,15 +7,21 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useCart } from "@/context/cart-context";
 import { formatPrice } from "@/lib/format";
+import { hasDiscount, PRODUCT_TAG_STYLES, productTags } from "@/lib/product-tags";
 import { categoryLabel } from "@/types/product";
 import type { Product } from "@/types/product";
 import { FavoriteButton } from "./FavoriteButton";
 import { ProductImage } from "./ProductImage";
+import { ProductQuickView } from "./ProductQuickView";
 import { StarRating } from "./StarRating";
 
-/** Card de produto: imagem, nome, categoria, preço formatado, avaliação e ações. */
+/** Card de produto: selos de vitrine, preço (com desconto riscado), avaliação e ações. */
 export function ProductCard({ product }: { product: Product }) {
   const { addItem } = useCart();
+  const [quickView, setQuickView] = useState(false);
+
+  const tags = productTags(product);
+  const discount = hasDiscount(product);
 
   return (
     <motion.div
@@ -29,6 +36,15 @@ export function ProductCard({ product }: { product: Product }) {
           productId={product._id}
           className="absolute right-3 top-3 z-10 bg-background/70 backdrop-blur-sm"
         />
+        {tags.length > 0 && (
+          <div className="absolute left-3 top-3 z-10 flex flex-col items-start gap-1.5">
+            {tags.map((tag) => (
+              <Badge key={tag} className={`border-0 ${PRODUCT_TAG_STYLES[tag]}`}>
+                {tag}
+              </Badge>
+            ))}
+          </div>
+        )}
         <Link
           to={`/produto/${product._id}`}
           className="block p-4 sm:p-5"
@@ -55,20 +71,26 @@ export function ProductCard({ product }: { product: Product }) {
           </Link>
           <StarRating rate={product.rating.rate} count={product.rating.count} />
           <div className="mt-auto flex items-end justify-between gap-3 pt-2">
-            <p className="text-xl font-bold tracking-tight text-primary">
-              {formatPrice(product.price)}
-            </p>
+            <div>
+              {discount && (
+                <p className="text-xs font-medium text-muted-foreground line-through">
+                  {formatPrice(product.oldPrice as number)}
+                </p>
+              )}
+              <p className="text-xl font-bold tracking-tight text-primary">
+                {formatPrice(product.price)}
+              </p>
+            </div>
             <div className="flex items-center gap-1.5">
               <Button
-                asChild
+                type="button"
                 variant="ghost"
                 size="icon"
-                aria-label="Ver detalhes"
+                aria-label={`Ver detalhes de ${product.title}`}
                 className="rounded-full text-muted-foreground"
+                onClick={() => setQuickView(true)}
               >
-                <Link to={`/produto/${product._id}`}>
-                  <Eye className="size-4" />
-                </Link>
+                <Eye className="size-4" />
               </Button>
               <Button
                 type="button"
@@ -83,6 +105,12 @@ export function ProductCard({ product }: { product: Product }) {
           </div>
         </div>
       </Card>
+
+      <ProductQuickView
+        product={product}
+        open={quickView}
+        onOpenChange={setQuickView}
+      />
     </motion.div>
   );
 }

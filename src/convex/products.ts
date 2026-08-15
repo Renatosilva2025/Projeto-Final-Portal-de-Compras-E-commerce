@@ -9,6 +9,7 @@ import {
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { getCurrentUser, isAdminUser } from "./users";
+import { notifyAdmins } from "./notifications";
 
 /** Categorias do catálogo (estilo marketplace de eletrônicos e acessórios). */
 export const PRODUCT_CATEGORIES = [
@@ -193,6 +194,16 @@ export const generateUploadUrl = mutation({
   },
 });
 
+const TAGS = ["Novo", "Oferta", "Esgotando"] as const;
+const tagsValidator = v.optional(v.array(v.string()));
+
+/** Normaliza os selos escolhidos, mantendo apenas os conhecidos e sem duplicatas. */
+function cleanTags(tags: string[] | undefined): string[] | undefined {
+  if (!tags || tags.length === 0) return undefined;
+  const cleaned = [...new Set(tags.filter((t) => (TAGS as readonly string[]).includes(t)))];
+  return cleaned.length > 0 ? cleaned : undefined;
+}
+
 /** Cria um novo anúncio (qualquer usuário logado). */
 export const create = mutation({
   args: {
@@ -202,6 +213,8 @@ export const create = mutation({
     category: v.string(),
     image: v.string(),
     stock: v.number(),
+    oldPrice: v.optional(v.number()),
+    tags: tagsValidator,
   },
   handler: async (ctx, args) => {
     const user = await getCurrentUser(ctx);
@@ -212,11 +225,14 @@ export const create = mutation({
     if (!title) throw new Error("Informe o título do anúncio.");
     if (!description) throw new Error("Informe a descrição do anúncio.");
     if (!args.price || args.price <= 0) throw new Error("Informe um preço válido.");
+    if (args.oldPrice !== undefined && args.oldPrice <= 0) {
+      throw new Error("Informe um preço antigo válido.");
+    }
     if (!args.category) throw new Error("Escolha uma categoria.");
     if (args.stock < 0) throw new Error("O estoque não pode ser negativo.");
     if (!args.image) throw new Error("Adicione uma imagem ao anúncio.");
 
-    return await ctx.db.insert("products", {
+    const productId = await ctx.db.insert("products", {
       title,
       description,
       price: args.price,
@@ -226,7 +242,19 @@ export const create = mutation({
       sellerId: user._id,
       stock: Math.floor(args.stock),
       status: "active",
+      oldPrice: args.oldPrice,
+      tags: cleanTags(args.tags),
     });
+
+    // Avisa os administradores sobre o novo anúncio publicado.
+    await notifyAdmins(ctx, {
+      type: "product",
+      title: "Novo anúncio publicado",
+      body: title,
+      link: "/admin?aba=produtos",
+    });
+
+    return productId;
   },
 });
 
@@ -240,6 +268,8 @@ export const update = mutation({
     category: v.optional(v.string()),
     image: v.optional(v.string()),
     stock: v.optional(v.number()),
+    oldPrice: v.optional(v.union(v.number(), v.null())),
+    tags: v.optional(v.union(v.array(v.string()), v.null())),
   },
   handler: async (ctx, { id, ...patch }) => {
     const user = await getCurrentUser(ctx);
@@ -274,6 +304,18 @@ export const update = mutation({
     if (patch.stock !== undefined) {
       if (patch.stock < 0) throw new Error("O estoque não pode ser negativo.");
       next.stock = Math.floor(patch.stock);
+    }
+    if (patch.oldPrice !== undefined) {
+      if (patch.oldPrice === null) {
+        next.oldPrice = undefined;
+      } else if (patch.oldPrice <= 0) {
+        throw new Error("Informe um preço antigo válido.");
+      } else {
+        next.oldPrice = patch.oldPrice;
+      }
+    }
+    if (patch.tags !== undefined) {
+      next.tags = patch.tags === null ? undefined : cleanTags(patch.tags);
     }
 
     await ctx.db.patch(id, next);
@@ -325,6 +367,8 @@ const seedProductValidator = v.object({
   rating: v.object({ rate: v.number(), count: v.number() }),
   stock: v.number(),
   status: v.union(v.literal("active"), v.literal("inactive")),
+  oldPrice: v.optional(v.number()),
+  tags: v.optional(v.array(v.string())),
 });
 
 /** Conta interna usada pela ação de semeadura. */
@@ -351,11 +395,61 @@ export const bulkInsert = internalMutation({
  * Semeia o catálogo a partir da Fake Store API + anúncios curados.
  * Executa apenas uma vez (quando não existe nenhum produto).
  */
+/** Selos e preço antigo aplicados aos anúncios curados (demonstração da vitrine). */
+const CURATED_TAGS: Record<string, { tags: string[]; oldPrice?: number }> = {
+  "Capa de celular para iPhone 15 Pro — silicone transparente": {
+    tags: ["Oferta"],
+    oldPrice: 15.9,
+  },
+  "Carregador USB-C Turbo 30W com cabo incluso": {
+    tags: ["Novo"],
+  },
+  "Fone de ouvido Bluetooth com cancelamento de ruído": {
+    tags: ["Oferta"],
+    oldPrice: 79.9,
+  },
+  "Película de vidro temperado 9H (2 unidades)": {
+    tags: ["Novo", "Oferta"],
+    oldPrice: 8.9,
+  },
+  "Smartphone Android 6.5\" 128 GB + carregador": {
+    tags: ["Esgotando"],
+    oldPrice: 289.9,
+  },
+};
+
+/** Aplica os selos de demonstração em catálogos já semeados (uma única vez). */
+export const enrichCatalog = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const existing = await ctx.db.query("products").collect();
+    const hasTags = existing.some((p) => Array.isArray(p.tags) && p.tags.length > 0);
+    if (hasTags) return;
+
+    for (const product of existing) {
+      const demo = CURATED_TAGS[product.title];
+      if (demo) {
+        const patch: { tags?: string[]; oldPrice?: number } = {
+          tags: demo.tags,
+        };
+        if (demo.oldPrice !== undefined && demo.oldPrice > product.price) {
+          patch.oldPrice = demo.oldPrice;
+        }
+        await ctx.db.patch(product._id, patch);
+      }
+    }
+  },
+});
+
 export const seed = action({
   args: {},
   handler: async (ctx): Promise<{ inserted: number }> => {
     const count = await ctx.runQuery(internal.products.countInternal);
-    if (count > 0) return { inserted: 0 };
+    if (count > 0) {
+      // Catálogo já existe: aplica os selos de demonstração uma única vez.
+      await ctx.runMutation(internal.products.enrichCatalog);
+      return { inserted: 0 };
+    }
 
     // A Fake Store API entrega preços em dólares; converte para reais
     // aproximados para o catálogo do portal.
@@ -370,16 +464,27 @@ export const seed = action({
       rating: { rate: number; count: number };
       stock: number;
       status: "active";
-    }> = CURATED_PRODUCTS.map((p) => ({
-      title: p.title,
-      description: p.description,
-      price: toBrl(p.price),
-      category: p.category,
-      image: p.image,
-      rating: { rate: 0, count: 0 },
-      stock: 100,
-      status: "active",
-    }));
+      oldPrice?: number;
+      tags?: string[];
+    }> = CURATED_PRODUCTS.map((p) => {
+      const demo = CURATED_TAGS[p.title];
+      const price = toBrl(p.price);
+      return {
+        title: p.title,
+        description: p.description,
+        price,
+        category: p.category,
+        image: p.image,
+        rating: { rate: 0, count: 0 },
+        stock: 100,
+        status: "active",
+        oldPrice:
+          demo?.oldPrice !== undefined && toBrl(demo.oldPrice) > price
+            ? toBrl(demo.oldPrice)
+            : undefined,
+        tags: demo?.tags,
+      };
+    });
 
     try {
       const response = await fetch(FAKE_STORE_URL);

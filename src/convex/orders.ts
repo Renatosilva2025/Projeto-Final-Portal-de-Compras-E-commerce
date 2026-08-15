@@ -2,7 +2,16 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { getCurrentUser, isAdminUser } from "./users";
+import { notify, notifyAdmins } from "./notifications";
 import { orderStatusValidator } from "./schema";
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: "Pendente",
+  paid: "Pago",
+  shipped: "Enviado",
+  delivered: "Entregue",
+  cancelled: "Cancelado",
+};
 
 /** Item do pedido (snapshot do produto no momento da compra). */
 const orderItemValidator = v.object({
@@ -69,6 +78,14 @@ export const create = mutation({
       address,
     });
 
+    // Avisa os administradores sobre o novo pedido.
+    await notifyAdmins(ctx, {
+      type: "order",
+      title: "Novo pedido recebido",
+      body: `${items.length} ${items.length === 1 ? "item" : "itens"} · R$ ${total.toFixed(2).replace(".", ",")} — ${customerName.trim()}`,
+      link: "/admin?aba=pedidos",
+    });
+
     return { orderId };
   },
 });
@@ -124,5 +141,13 @@ export const updateStatus = mutation({
     if (!order) throw new Error("Pedido não encontrado.");
 
     await ctx.db.patch(id, { status });
+
+    // Avisa o cliente sobre a nova situação do pedido.
+    await notify(ctx, [order.userId], {
+      type: "order",
+      title: "Pedido atualizado",
+      body: `Seu pedido #${id.slice(-8).toUpperCase()} agora está ${STATUS_LABELS[status] ?? status}.`,
+      link: `/pedido/${id}`,
+    });
   },
 });

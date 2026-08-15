@@ -12,10 +12,13 @@ import {
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { CartDrawer } from "@/components/store/CartDrawer";
+import { useFavorites } from "@/context/favorites-context";
 import { CategoryCarousel } from "@/components/store/CategoryCarousel";
 import { CategoryFilter } from "@/components/store/CategoryFilter";
 import { EmptyState } from "@/components/store/EmptyState";
@@ -33,6 +36,40 @@ import { CATEGORY_ICONS } from "@/components/store/category-icons";
 import { categoryLabel } from "@/types/product";
 import type { Product } from "@/types/product";
 
+/** Separa o título do hero: a parte após a última vírgula ganha itálico. */
+function splitHeroTitle(title: string): [string, string | null] {
+  const idx = title.lastIndexOf(",");
+  if (idx === -1) return [title, null];
+  return [title.slice(0, idx), title.slice(idx + 1).trim()];
+}
+
+/** Campo de faixa de preço com prefixo R$ e cantos arredondados. */
+function PriceField({
+  value,
+  placeholder,
+  onValue,
+}: {
+  value: string;
+  placeholder: string;
+  onValue: (value: string | null) => void;
+}) {
+  return (
+    <div className="relative">
+      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
+        R$
+      </span>
+      <Input
+        value={value}
+        onChange={(e) => onValue(e.target.value === "" ? null : e.target.value)}
+        placeholder={placeholder}
+        inputMode="decimal"
+        aria-label={`Preço ${placeholder.toLowerCase()}`}
+        className="h-9 w-24 rounded-full pl-8 text-sm"
+      />
+    </div>
+  );
+}
+
 /** Página inicial: hero + catálogo completo com filtros, busca e ordenação. */
 export default function HomePage() {
   const navigate = useNavigate();
@@ -40,6 +77,11 @@ export default function HomePage() {
   const category = searchParams.get("categoria");
   const q = searchParams.get("q") ?? "";
   const rawSort = searchParams.get("ordem") ?? "relevance";
+  const rawMin = searchParams.get("min");
+  const rawMax = searchParams.get("max");
+  const minPrice = rawMin ? Number(rawMin) : undefined;
+  const maxPrice = rawMax ? Number(rawMax) : undefined;
+  const onlyFavorites = searchParams.get("favoritos") === "1";
   const sort: SortOption = SORT_OPTIONS.some((o) => o.value === rawSort)
     ? (rawSort as SortOption)
     : "relevance";
@@ -48,8 +90,19 @@ export default function HomePage() {
   const allProducts = useQuery(api.products.list, {});
   const categories = useQuery(api.products.categories);
   const community = useQuery(api.products.listCommunity);
+  const hero = useQuery(api.settings.getHero);
+  const { favoriteIds } = useFavorites();
 
   const loading = products === undefined || categories === undefined;
+
+  // Conteúdo institucional (editável pelo administrador no painel).
+  const heroBadge = hero?.heroBadge ?? "Portal de Compras PD · Projeto final";
+  const heroTitle =
+    hero?.heroTitle ?? "Eletrônicos e acessórios, em um só lugar.";
+  const heroDescription =
+    hero?.heroDescription ??
+    "Capas de celular, carregadores, notebooks, fones e muito mais — compre como em um marketplace, anuncie seus produtos e avalie o que comprou.";
+  const [heroMain, heroAccent] = splitHeroTitle(heroTitle);
 
   const setParam = (key: string, value: string | null) => {
     const params = new URLSearchParams(searchParams);
@@ -72,7 +125,22 @@ export default function HomePage() {
           categoryLabel(p.category).toLowerCase().includes(term),
       );
     }
+    if (typeof minPrice === "number" && Number.isFinite(minPrice)) {
+      result = result.filter((p) => p.price >= minPrice);
+    }
+    if (typeof maxPrice === "number" && Number.isFinite(maxPrice)) {
+      result = result.filter((p) => p.price <= maxPrice);
+    }
+    if (onlyFavorites) {
+      result = result.filter((p) => favoriteIds.includes(p._id));
+    }
     switch (sort) {
+      case "name-asc":
+        result.sort((a, b) => a.title.localeCompare(b.title, "pt-BR"));
+        break;
+      case "name-desc":
+        result.sort((a, b) => b.title.localeCompare(a.title, "pt-BR"));
+        break;
       case "price-asc":
         result.sort((a, b) => a.price - b.price);
         break;
@@ -84,9 +152,14 @@ export default function HomePage() {
         break;
     }
     return result;
-  }, [products, q, sort]);
+  }, [products, q, sort, minPrice, maxPrice, onlyFavorites, favoriteIds]);
 
-  const hasFilters = Boolean(category || q || sort !== "relevance");
+  const hasPriceFilter =
+    (typeof minPrice === "number" && Number.isFinite(minPrice)) ||
+    (typeof maxPrice === "number" && Number.isFinite(maxPrice));
+  const hasFilters = Boolean(
+    category || q || sort !== "relevance" || onlyFavorites || hasPriceFilter,
+  );
   const heroProducts = (allProducts ?? []).slice(0, 3);
 
   /** Agrupa todos os produtos por categoria para os carrosséis. */
@@ -100,8 +173,9 @@ export default function HomePage() {
     return map;
   }, [allProducts]);
 
-  /** Modo vitrine: sem busca, categoria ou ordenação → carrosséis por categoria. */
-  const browseMode = !category && !q && sort === "relevance";
+  /** Modo vitrine: sem busca, categoria, ordenação, preço ou favoritos → carrosséis. */
+  const browseMode =
+    !category && !q && sort === "relevance" && !onlyFavorites && !hasPriceFilter;
 
   /** Slug sem acentos usado nas âncoras dos carrosséis. */
   const categorySlug = (value: string) =>
@@ -126,18 +200,21 @@ export default function HomePage() {
             <div className="space-y-6">
               <span className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/25 bg-primary/5 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
                 <PackageSearch className="size-4" />
-                Portal de Compras PD · Projeto final
+                {heroBadge}
               </span>
 
               <h1 className="font-serif text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
-                Eletrônicos e acessórios,{" "}
-                <span className="italic text-primary">em um só lugar.</span>
+                {heroMain}
+                {heroAccent && (
+                  <>
+                    ,{" "}
+                    <span className="italic text-primary">{heroAccent}</span>
+                  </>
+                )}
               </h1>
 
               <p className="max-w-lg text-base leading-7 text-muted-foreground sm:text-lg">
-                Capas de celular, carregadores, notebooks, fones e muito mais —
-                compre como em um marketplace, anuncie seus produtos e avalie
-                o que comprou.
+                {heroDescription}
               </p>
 
               <div className="flex flex-wrap gap-3">
@@ -274,30 +351,59 @@ export default function HomePage() {
                       ? `Mostrando produtos de ${categoryLabel(category)}`
                       : q
                         ? `Resultados para "${q}"`
-                        : "Todos os produtos ordenados"}
+                        : onlyFavorites
+                          ? "Mostrando apenas os seus favoritos"
+                          : hasPriceFilter
+                            ? "Produtos dentro da faixa de preço escolhida"
+                            : "Todos os produtos ordenados"}
                 </p>
               </div>
-              {!browseMode && (
-                <div className="flex items-center gap-3">
-                  {!loading && (
-                    <span className="whitespace-nowrap text-sm text-muted-foreground">
-                      {filtered.length}{" "}
-                      {filtered.length === 1 ? "produto" : "produtos"}
-                    </span>
-                  )}
-                  <SortSelect
-                    value={sort}
-                    onChange={(value) => setParam("ordem", value)}
-                  />
-                </div>
+              {!browseMode && !loading && (
+                <span className="whitespace-nowrap text-sm text-muted-foreground">
+                  {filtered.length}{" "}
+                  {filtered.length === 1 ? "produto" : "produtos"}
+                </span>
               )}
             </div>
 
-            <CategoryFilter
-              categories={categories ?? []}
-              active={category}
-              onSelect={(value) => setParam("categoria", value)}
-            />
+            {/* Barra de filtros fixa durante a rolagem */}
+            <div className="sticky top-[118px] z-30 -mx-4 border-y border-border/60 bg-background/95 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6 lg:-mx-8 lg:top-[64px] lg:px-8">
+              <CategoryFilter
+                categories={categories ?? []}
+                active={category}
+                onSelect={(value) => setParam("categoria", value)}
+              />
+              <div className="mt-3 flex flex-wrap items-center gap-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Preço
+                  </span>
+                  <PriceField
+                    value={rawMin ?? ""}
+                    placeholder="De"
+                    onValue={(value) => setParam("min", value)}
+                  />
+                  <PriceField
+                    value={rawMax ?? ""}
+                    placeholder="Até"
+                    onValue={(value) => setParam("max", value)}
+                  />
+                </div>
+                <SortSelect
+                  value={sort}
+                  onChange={(value) => setParam("ordem", value)}
+                />
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground">
+                  <Switch
+                    checked={onlyFavorites}
+                    onCheckedChange={(value) =>
+                      setParam("favoritos", value ? "1" : null)
+                    }
+                  />
+                  Só favoritos
+                </label>
+              </div>
+            </div>
 
             {loading ? (
               browseMode ? (

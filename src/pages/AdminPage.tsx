@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
   Banknote,
   Eye,
+  Palette,
   PencilLine,
   ShieldCheck,
   ShoppingBag,
@@ -26,6 +27,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -34,6 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StoreLayout } from "@/components/layout/StoreLayout";
 import { RequireAuth } from "@/components/RequireAuth";
@@ -58,13 +62,31 @@ function AdminPanel() {
   const products = useQuery(api.products.listAllProducts);
   const orders = useQuery(api.orders.listAll);
   const users = useQuery(api.users.listAll);
+  const hero = useQuery(api.settings.getHero);
 
   const toggleStatus = useMutation(api.products.toggleStatus);
   const removeProduct = useMutation(api.products.remove);
   const updateStatus = useMutation(api.orders.updateStatus);
   const setRole = useMutation(api.users.setRole);
+  const updateHero = useMutation(api.settings.updateHero);
 
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [heroForm, setHeroForm] = useState<{
+    heroBadge: string;
+    heroTitle: string;
+    heroDescription: string;
+  } | null>(null);
+
+  // Sincroniza o formulário com o conteúdo atual do hero quando carrega.
+  useEffect(() => {
+    if (hero && heroForm === null) {
+      setHeroForm({
+        heroBadge: hero.heroBadge,
+        heroTitle: hero.heroTitle,
+        heroDescription: hero.heroDescription,
+      });
+    }
+  }, [hero, heroForm]);
 
   const setTab = (tab: string) => setSearchParams({ aba: tab });
 
@@ -138,6 +160,17 @@ function AdminPanel() {
     }
   };
 
+  const handleHeroSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!heroForm) return;
+    try {
+      await updateHero(heroForm);
+      toast.success("Hero da página inicial atualizado!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Não foi possível salvar.");
+    }
+  };
+
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <div>
@@ -163,6 +196,9 @@ function AdminPanel() {
           </TabsTrigger>
           <TabsTrigger value="usuarios" className="rounded-full">
             Usuários
+          </TabsTrigger>
+          <TabsTrigger value="aparencia" className="rounded-full">
+            Aparência
           </TabsTrigger>
         </TabsList>
 
@@ -370,6 +406,97 @@ function AdminPanel() {
               ))}
             </ul>
           )}
+        </TabsContent>
+
+        {/* ── Aparência ───────────────────────────────────────── */}
+        <TabsContent value="aparencia" className="mt-6">
+          <div className="max-w-2xl rounded-2xl border border-border/70 bg-card p-6">
+            <h2 className="flex items-center gap-2 font-serif text-xl font-bold">
+              <Palette className="size-5 text-primary" />
+              Hero da página inicial
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Edite o conteúdo institucional exibido no topo da página inicial.
+              O título é dividido na última vírgula para destacar o final em
+              itálico.
+            </p>
+
+            {hero === undefined || heroForm === null ? (
+              <div className="mt-6 space-y-4">
+                <Skeleton className="h-10 w-full rounded-full" />
+                <Skeleton className="h-10 w-full rounded-full" />
+                <Skeleton className="h-24 w-full rounded-xl" />
+                <Skeleton className="h-10 w-44 rounded-full" />
+              </div>
+            ) : (
+              <form onSubmit={handleHeroSubmit} className="mt-6 space-y-4">
+                <div>
+                  <Label htmlFor="hero-badge" className="mb-2 block">
+                    Selo (badge)
+                  </Label>
+                  <Input
+                    id="hero-badge"
+                    value={heroForm.heroBadge}
+                    onChange={(e) =>
+                      setHeroForm((prev) =>
+                        prev ? { ...prev, heroBadge: e.target.value } : prev,
+                      )
+                    }
+                    maxLength={80}
+                    placeholder="Portal de Compras PD · Projeto final"
+                    className="rounded-full"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="hero-title" className="mb-2 block">
+                    Título
+                  </Label>
+                  <Input
+                    id="hero-title"
+                    value={heroForm.heroTitle}
+                    onChange={(e) =>
+                      setHeroForm((prev) =>
+                        prev ? { ...prev, heroTitle: e.target.value } : prev,
+                      )
+                    }
+                    maxLength={120}
+                    placeholder="Eletrônicos e acessórios, em um só lugar."
+                    className="rounded-full"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="hero-description" className="mb-2 block">
+                    Descrição
+                  </Label>
+                  <Textarea
+                    id="hero-description"
+                    value={heroForm.heroDescription}
+                    onChange={(e) =>
+                      setHeroForm((prev) =>
+                        prev ? { ...prev, heroDescription: e.target.value } : prev,
+                      )
+                    }
+                    rows={3}
+                    maxLength={500}
+                    className="rounded-2xl"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-3 pt-1">
+                  <Button type="submit" className="rounded-full">
+                    Salvar alterações
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={() => hero && setHeroForm(hero)}
+                  >
+                    Descartar alterações
+                  </Button>
+                </div>
+              </form>
+            )}
+          </div>
         </TabsContent>
 
         {/* ── Usuários ────────────────────────────────────────── */}

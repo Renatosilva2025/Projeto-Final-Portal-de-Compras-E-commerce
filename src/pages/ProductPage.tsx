@@ -5,8 +5,10 @@ import type { Id } from "@/convex/_generated/dataModel";
 import {
   ArrowRight,
   ChevronRight,
+  MessageCircle,
   MessageSquareText,
   RotateCcw,
+  Share2,
   ShieldCheck,
   ShoppingBag,
   Star,
@@ -29,9 +31,13 @@ import { StarRating } from "@/components/store/StarRating";
 import { StoreLayout } from "@/components/layout/StoreLayout";
 import { useAuth } from "@/hooks/use-auth";
 import { useCart } from "@/context/cart-context";
+import { hasDiscount, PRODUCT_TAG_STYLES, productTags } from "@/lib/product-tags";
 import { cn } from "@/lib/utils";
 import { formatDate, formatPrice } from "@/lib/format";
 import { categoryLabel } from "@/types/product";
+
+/** Número do WhatsApp do vendedor (formato internacional, sem espaços). */
+const WHATSAPP_NUMBER = "5511999999999";
 
 const TRUST_ITEMS = [
   { icon: Truck, title: "Frete grátis", description: "Em todas as compras" },
@@ -99,6 +105,24 @@ export default function ProductPage() {
       toast.success("Avaliação removida.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Não foi possível remover.");
+    }
+  };
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: product?.title, url });
+        return;
+      }
+    } catch {
+      // compartilhamento nativo cancelado — segue para copiar o link
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copiado para a área de transferência.");
+    } catch {
+      toast.error("Não foi possível copiar o link.");
     }
   };
 
@@ -195,6 +219,14 @@ export default function ProductPage() {
                 >
                   {categoryLabel(product.category)}
                 </Badge>
+                {productTags(product).map((tag) => (
+                  <Badge
+                    key={tag}
+                    className={`w-fit border-0 ${PRODUCT_TAG_STYLES[tag]}`}
+                  >
+                    {tag}
+                  </Badge>
+                ))}
                 {product.sellerId && (
                   <Badge
                     variant="secondary"
@@ -217,9 +249,16 @@ export default function ProductPage() {
 
             <StarRating rate={product.rating.rate} count={product.rating.count} />
 
-            <p className="font-serif text-4xl font-bold text-primary">
-              {formatPrice(product.price)}
-            </p>
+            <div className="flex flex-wrap items-baseline gap-3">
+              {hasDiscount(product) && (
+                <p className="text-lg font-medium text-muted-foreground line-through">
+                  {formatPrice(product.oldPrice as number)}
+                </p>
+              )}
+              <p className="font-serif text-4xl font-bold text-primary">
+                {formatPrice(product.price)}
+              </p>
+            </div>
 
             <p className="leading-7 text-muted-foreground">
               {product.description}
@@ -248,6 +287,36 @@ export default function ProductPage() {
                 size="icon-lg"
                 className="border border-border bg-background"
               />
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="flex-1 rounded-full border-emerald-600/40 bg-emerald-50/60 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 sm:flex-none"
+              >
+                <a
+                  href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+                    `Olá! Tenho interesse no produto "${product.title}" (${formatPrice(product.price)}) do Portal de Compras PD.`,
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <MessageCircle className="size-4" />
+                  Consultar no WhatsApp
+                </a>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                className="rounded-full"
+                onClick={handleShare}
+              >
+                <Share2 className="size-4" />
+                Compartilhar
+              </Button>
             </div>
 
             <p className="text-sm text-muted-foreground">

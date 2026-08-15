@@ -6,6 +6,7 @@ import { BadgePlus, ImagePlus, Loader2, Upload, X } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,6 +22,7 @@ import { StoreLayout } from "@/components/layout/StoreLayout";
 import { RequireAuth } from "@/components/RequireAuth";
 import { ErrorState } from "@/components/store/ErrorState";
 import { useAuth } from "@/hooks/use-auth";
+import { PRODUCT_TAGS } from "@/lib/product-tags";
 import { PRODUCT_CATEGORIES } from "@/types/product";
 
 /** Carrega o produto em modo de edição e cuida de permissões. */
@@ -88,7 +90,16 @@ function ListingForm({
   const [imageUrl, setImageUrl] = useState(initial?.image ?? "");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState(initial?.image ?? "");
+  const [tags, setTags] = useState<string[]>(initial?.tags ?? []);
+  const [oldPrice, setOldPrice] = useState(
+    initial?.oldPrice ? String(initial.oldPrice) : "",
+  );
   const [submitting, setSubmitting] = useState(false);
+
+  const toggleTag = (tag: string) =>
+    setTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
@@ -120,6 +131,20 @@ function ListingForm({
       toast.error("Informe um estoque válido.");
       return;
     }
+    const parsedOldPrice = oldPrice.trim()
+      ? Number.parseFloat(oldPrice.replace(",", "."))
+      : undefined;
+    if (
+      parsedOldPrice !== undefined &&
+      (!Number.isFinite(parsedOldPrice) || parsedOldPrice <= 0)
+    ) {
+      toast.error("Informe um preço antigo válido.");
+      return;
+    }
+    if (parsedOldPrice !== undefined && parsedOldPrice <= parsedPrice) {
+      toast.error("O preço antigo deve ser maior que o preço atual.");
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -148,10 +173,18 @@ function ListingForm({
         category,
         image: finalImage,
         stock: parsedStock,
+        oldPrice: parsedOldPrice,
+        tags: tags.length > 0 ? tags : undefined,
       };
 
       if (editId && initial) {
-        await updateProduct({ id: editId, ...args });
+        // Na edição, null remove o campo; undefined mantém o valor atual.
+        await updateProduct({
+          id: editId,
+          ...args,
+          oldPrice: parsedOldPrice ?? null,
+          tags: tags.length > 0 ? tags : null,
+        });
         toast.success("Anúncio atualizado com sucesso!");
         onDone(editId);
       } else {
@@ -291,7 +324,7 @@ function ListingForm({
           </div>
           <div>
             <Label htmlFor="sell-price" className="mb-2 block">
-              Preço (US$)
+              Preço (R$)
             </Label>
             <Input
               id="sell-price"
@@ -314,6 +347,43 @@ function ListingForm({
               inputMode="numeric"
             />
           </div>
+        </div>
+
+        {/* Selos de vitrine + preço antigo */}
+        <div>
+          <Label className="mb-2 block">Selos de vitrine</Label>
+          <div className="flex flex-wrap gap-2">
+            {PRODUCT_TAGS.map((tag) => (
+              <label
+                key={tag}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border px-3.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
+              >
+                <Checkbox
+                  checked={tags.includes(tag)}
+                  onCheckedChange={() => toggleTag(tag)}
+                />
+                {tag}
+              </label>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            "Oferta" exibe o preço antigo riscado ao lado do preço atual;
+            "Esgotando" indica estoque no fim.
+          </p>
+          {tags.includes("Oferta") && (
+            <div className="mt-3 max-w-xs">
+              <Label htmlFor="sell-oldprice" className="mb-2 block">
+                Preço antigo (R$) — para riscar
+              </Label>
+              <Input
+                id="sell-oldprice"
+                value={oldPrice}
+                onChange={(e) => setOldPrice(e.target.value)}
+                placeholder="0.00"
+                inputMode="decimal"
+              />
+            </div>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-3 pt-2">

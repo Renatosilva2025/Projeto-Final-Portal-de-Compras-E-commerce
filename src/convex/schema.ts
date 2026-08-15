@@ -64,6 +64,10 @@ const schema = defineSchema(
       sellerId: v.optional(v.id("users")), // undefined = anúncio semeador da API
       stock: v.number(),
       status: v.union(v.literal("active"), v.literal("inactive")),
+      // Preço antigo (para exibir desconto riscado) — opcional.
+      oldPrice: v.optional(v.number()),
+      // Selos de vitrine: "Novo", "Oferta", "Esgotando" — opcional.
+      tags: v.optional(v.array(v.string())),
     })
       .index("by_seller", ["sellerId"])
       .index("by_category", ["category"]),
@@ -78,6 +82,24 @@ const schema = defineSchema(
     })
       .index("by_product", ["productId"])
       .index("by_user", ["userId"]),
+
+    /** Conteúdo institucional editável (ex.: hero da página inicial). */
+    settings: defineTable({
+      key: v.string(),
+      value: v.string(), // JSON serializado
+    }).index("by_key", ["key"]),
+
+    /** Central de notificações in-app dos usuários. */
+    notifications: defineTable({
+      userId: v.id("users"),
+      type: v.string(), // "order", "product", "system"
+      title: v.string(),
+      body: v.string(),
+      read: v.boolean(),
+      link: v.optional(v.string()),
+    })
+      .index("by_user", ["userId"])
+      .index("by_user_read", ["userId", "read"]),
 
     /** Pedidos realizados pelos clientes. */
     orders: defineTable({

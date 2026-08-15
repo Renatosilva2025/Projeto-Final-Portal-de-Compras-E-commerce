@@ -22,9 +22,10 @@ controle de produtos, pedidos e usuários.
 
 ## ✨ Funcionalidades
 
-- **Catálogo inteligente** — cards responsivos com preço em R$, avaliação e
-  estoque; busca com debounce, filtro por categoria e ordenação (preço e
-  avaliação) sincronizadas com a URL.
+- **Catálogo inteligente** — vitrine com **carrosséis por categoria** (estilo
+  marketplace), cards responsivos com preço em R$, avaliação e estoque; busca
+  com debounce, filtro por categoria e ordenação (preço e avaliação)
+  sincronizadas com a URL.
 - **Detalhes do produto** — imagem, descrição, vendedor, estoque, avaliação
   com estrelas e seção de comentários (login obrigatório para avaliar).
 - **Carrinho de compras** — adicionar, remover, alterar quantidade e total em
@@ -60,7 +61,6 @@ controle de produtos, pedidos e usuários.
 | Recurso        | Link                                                            |
 | -------------- | --------------------------------------------------------------- |
 | **Código-fonte** | https://github.com/Renatosilva2025/Projeto-Final-Portal-de-Compras-E-commerce |
-| **Demonstração** | https://portaldecompraspd.freebuff.app                          |
 
 > Para rodar localmente, siga as instruções do [`README.md`](README.md).
 

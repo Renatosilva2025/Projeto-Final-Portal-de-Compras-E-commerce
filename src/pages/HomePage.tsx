@@ -21,6 +21,7 @@ import { CategoryFilter } from "@/components/store/CategoryFilter";
 import { EmptyState } from "@/components/store/EmptyState";
 import { ProductCard } from "@/components/store/ProductCard";
 import { ProductCardSkeleton } from "@/components/store/ProductCardSkeleton";
+import { ProductCarousel } from "@/components/store/ProductCarousel";
 import { ProductImage } from "@/components/store/ProductImage";
 import {
   SortSelect,
@@ -399,27 +400,23 @@ export default function HomePage() {
         {/* ── Anúncios da comunidade ───────────────────────────── */}
         {community && community.length > 0 && (
           <section className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-              <div>
+            <ProductCarousel
+              products={community}
+              title={
                 <h2 className="font-serif text-2xl font-bold sm:text-3xl">
                   Anúncios da comunidade
                 </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Produtos cadastrados pelos próprios vendedores do portal.
-                </p>
-              </div>
-              <Button asChild variant="outline" className="rounded-full">
-                <Link to="/anunciar">
-                  <Store className="size-4" />
-                  Anunciar também
-                </Link>
-              </Button>
-            </div>
-            <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {community.map((product) => (
-                <ProductCard key={product._id} product={product} />
-              ))}
-            </div>
+              }
+              description="Produtos cadastrados pelos próprios vendedores do portal."
+              action={
+                <Button asChild variant="outline" className="rounded-full">
+                  <Link to="/anunciar">
+                    <Store className="size-4" />
+                    Anunciar também
+                  </Link>
+                </Button>
+              }
+            />
           </section>
         )}
       </main>

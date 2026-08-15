@@ -1,7 +1,7 @@
 {
-  "name": "freebuff.com application",
-  "short_name": "freebuff.com",
-  "description": "freebuff.com application",
+  "name": "Portal de Compras PD",
+  "short_name": "Portal PD",
+  "description": "Portal de compras de eletrônicos e acessórios — marketplace de capas, carregadores, notebooks, fones e muito mais.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

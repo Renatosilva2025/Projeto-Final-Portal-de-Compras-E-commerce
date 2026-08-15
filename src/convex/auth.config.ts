@@ -1,31 +1,30 @@
 import type { AuthConfig } from "convex/server";
 
-// Freebuff-signed federated tokens (see freebuff web's
-// src/lib/vly-convex-jwt.ts) let a signed-in freebuff.com user carry their
-// identity into this project without going through local sign-in. customJwt
-// is correct for this provider: freebuff's tokens and JWKS both carry a
-// `kid` header, which the customJwt validation path requires.
-const freebuffIssuer =
+// Provedor de identidade federada da plataforma de hospedagem: tokens
+// assinados (JWT RS256) validados via JWKS. O login próprio do portal usa
+// e-mail/OTP + anônimo (ver src/convex/auth.ts); este provedor permite que
+// quem já está autenticado na plataforma entre sem novo cadastro.
+const federatedIssuer =
   process.env.VLY_CONVEX_AUTH_ISSUER ?? "https://freebuff.com";
 
 export default {
   providers: [
-    // Standard Convex Auth provider for this project's own sign-in ("Get
-    // Started" email/guest, see src/convex/auth.ts). The deployment
-    // self-issues JWTs (iss = CONVEX_SITE_URL, no `kid` header) validated
-    // via OIDC discovery at `${domain}/.well-known/openid-configuration`,
-    // served by auth.addHttpRoutes() in convex/http.ts. Do NOT convert this
-    // entry to `type: "customJwt"` — that path rejects tokens without a
-    // `kid` header, so sign-in would silently never confirm and RequireAuth
-    // would loop back to /auth forever.
+    // Login padrão do Convex Auth para a conta do próprio portal ("Começar"
+    // com e-mail/OTP ou convidado, ver src/convex/auth.ts). O deployment
+    // emite seus próprios JWTs (iss = CONVEX_SITE_URL, sem header `kid`)
+    // validados via descoberta OIDC em `${domain}/.well-known/openid-configuration`,
+    // servida por auth.addHttpRoutes() em convex/http.ts. Não converter esta
+    // entrada para `type: "customJwt"`: esse caminho rejeita tokens sem
+    // header `kid`, então o login nunca confirmaria e o RequireAuth voltaria
+    // para /auth indefinidamente.
     {
       domain: process.env.CONVEX_SITE_URL!,
       applicationID: "convex",
     },
     {
       type: "customJwt",
-      issuer: freebuffIssuer,
-      jwks: `${freebuffIssuer}/api/web/.well-known/jwks.json`,
+      issuer: federatedIssuer,
+      jwks: `${federatedIssuer}/api/web/.well-known/jwks.json`,
       applicationID: "vly-convex",
       algorithm: "RS256",
     },

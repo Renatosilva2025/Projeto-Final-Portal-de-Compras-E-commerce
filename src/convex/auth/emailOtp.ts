@@ -16,17 +16,26 @@ export const emailOtp = Email({
     return generateRandomString(random, alphabet, 6);
   },
   async sendVerificationRequest({ identifier: email, token }) {
+    const sendUrl = process.env.VLY_OTP_SEND_URL;
+    const apiKey = process.env.VLY_OTP_API_KEY;
+
+    if (!sendUrl || !apiKey) {
+      throw new Error(
+        "Provedor de e-mail OTP não configurado. Defina as variáveis VLY_OTP_SEND_URL e VLY_OTP_API_KEY.",
+      );
+    }
+
     try {
       await axios.post(
-        "https://auth.freebuff.app/send_otp",
+        sendUrl,
         {
           to: email,
           otp: token,
-          appName: process.env.VLY_APP_NAME || "a freebuff.com application",
+          appName: process.env.VLY_APP_NAME || "Portal de Compras PD",
         },
         {
           headers: {
-            "x-api-key": "fb_email_2crN1hqIArZP2bEfvjp5Qik4",
+            "x-api-key": apiKey,
           },
         },
       );

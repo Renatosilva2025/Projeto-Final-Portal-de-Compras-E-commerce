@@ -22,7 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { FavoriteButton } from "@/components/store/FavoriteButton";
 import { ErrorState } from "@/components/store/ErrorState";
-import { ProductCard } from "@/components/store/ProductCard";
+import { ProductCarousel } from "@/components/store/ProductCarousel";
 import { ProductImage } from "@/components/store/ProductImage";
 import { QuantityStepper } from "@/components/store/QuantityStepper";
 import { StarRating } from "@/components/store/StarRating";
@@ -438,33 +438,29 @@ export default function ProductPage() {
         {/* Relacionados */}
         {related.length > 0 && (
           <section className="mt-16">
-            <div className="mb-6 flex items-end justify-between gap-4">
-              <div>
+            <ProductCarousel
+              products={related}
+              title={
                 <h2 className="font-serif text-2xl font-bold">
                   Você também pode gostar
                 </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Produtos da mesma categoria
-                </p>
-              </div>
-              <Button
-                asChild
-                variant="ghost"
-                className="hidden rounded-full text-muted-foreground sm:inline-flex"
-              >
-                <Link
-                  to={`/?categoria=${encodeURIComponent(product.category)}`}
+              }
+              description="Produtos da mesma categoria"
+              action={
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="hidden rounded-full text-muted-foreground sm:inline-flex"
                 >
-                  Ver todos
-                  <ArrowRight className="size-4" />
-                </Link>
-              </Button>
-            </div>
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {related.map((p) => (
-                <ProductCard key={p._id} product={p} />
-              ))}
-            </div>
+                  <Link
+                    to={`/?categoria=${encodeURIComponent(product.category)}`}
+                  >
+                    Ver todos
+                    <ArrowRight className="size-4" />
+                  </Link>
+                </Button>
+              }
+            />
           </section>
         )}
       </div>

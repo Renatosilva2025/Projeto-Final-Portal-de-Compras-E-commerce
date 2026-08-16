@@ -1,0 +1,1 @@
+import{j as s}from"./framer-motion-D5IBGcks.js";import{H as r,F as a,C as o}from"./product-X6Ub9sNY.js";function m({children:e}){return s.jsxs("div",{className:"flex min-h-screen flex-col",children:[s.jsx(r,{}),s.jsx("main",{className:"flex-1",children:e}),s.jsx(a,{}),s.jsx(o,{})]})}export{m as S};

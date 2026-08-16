@@ -72,6 +72,21 @@ controle de produtos, pedidos e usuários.
 - Roteamento, componentes reutilizáveis e interface responsiva
 - Boas práticas de UX: skeletons, toasts, dark mode e micro-interações
 
+## 🖼️ Créditos das imagens
+
+As fotos do catálogo são ilustrativas e pertencem aos seus respectivos
+autores:
+
+- **Unsplash** — fotos de carregador, notebook, fone de ouvido e smartphone
+  (licença gratuita para uso comercial, sem atribuição obrigatória).
+- **Wikimedia Commons** — foto de capa de celular
+  ([Mobile phone case](https://commons.wikimedia.org/wiki/File:Mobile_phone_case.jpg),
+  CC BY-SA 4.0) e película de vidro
+  ([Screen protector](https://commons.wikimedia.org/wiki/File:Screen_protector.png),
+  domínio público).
+- **Fake Store API** — demais produtos do catálogo semeado (fotos
+  ilustrativas dos produtos da API).
+
 ---
 
 *Projeto final desenvolvido por Renato Silva.*

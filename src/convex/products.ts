@@ -6,7 +6,7 @@ import {
   mutation,
   query,
 } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { getCurrentUser, isAdminUser } from "./users";
 import { notifyAdmins } from "./notifications";
@@ -42,7 +42,8 @@ const CURATED_PRODUCTS = [
       "Capa fina de silicone fosco com proteção contra quedas e arranhões. Compatível com carregamento sem fio e botões de fácil acesso.",
     price: 12.9,
     category: "Acessórios para celular",
-    image: "https://picsum.photos/seed/portal-capa-iphone/600/600",
+    image:
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/6/62/Mobile_phone_case.jpg/960px-Mobile_phone_case.jpg",
   },
   {
     title: "Carregador USB-C Turbo 30W com cabo incluso",
@@ -50,7 +51,8 @@ const CURATED_PRODUCTS = [
       "Carregador rápido de 30W com tecnologia GaN, compacto e eficiente. Carrega smartphones e notebooks USB-C com segurança.",
     price: 18.9,
     category: "Carregadores e cabos",
-    image: "https://picsum.photos/seed/portal-carregador/600/600",
+    image:
+      "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=600&q=80",
   },
   {
     title: "Notebook ultrafino 15.6\" — 16 GB RAM, 512 GB SSD",
@@ -58,7 +60,8 @@ const CURATED_PRODUCTS = [
       "Notebook leve e rápido para estudos e trabalho. Tela Full HD, teclado ABNT2 e bateria de longa duração.",
     price: 649.9,
     category: "Notebooks e computadores",
-    image: "https://picsum.photos/seed/portal-notebook/600/600",
+    image:
+      "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=600&q=80",
   },
   {
     title: "Fone de ouvido Bluetooth com cancelamento de ruído",
@@ -66,7 +69,8 @@ const CURATED_PRODUCTS = [
       "Fone sem fio com cancelamento ativo de ruído, 30 horas de bateria e estojo de carregamento portátil.",
     price: 59.9,
     category: "Áudio e fones de ouvido",
-    image: "https://picsum.photos/seed/portal-fone/600/600",
+    image:
+      "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=600&q=80",
   },
   {
     title: "Película de vidro temperado 9H (2 unidades)",
@@ -74,7 +78,7 @@ const CURATED_PRODUCTS = [
       "Proteção de vidro temperado com alta resistência a riscos e impactos. Instalação simples, livre de bolhas.",
     price: 6.9,
     category: "Acessórios para celular",
-    image: "https://picsum.photos/seed/portal-pelicula/600/600",
+    image: "https://upload.wikimedia.org/wikipedia/commons/9/94/Screen_protector.png",
   },
   {
     title: "Smartphone Android 6.5\" 128 GB + carregador",
@@ -82,7 +86,8 @@ const CURATED_PRODUCTS = [
       "Smartphone com tela de 6.5 polegadas, 128 GB de armazenamento e câmera dupla. Acompanha carregador e capa protetora.",
     price: 249.9,
     category: "Smartphones e tablets",
-    image: "https://picsum.photos/seed/portal-smartphone/600/600",
+    image:
+      "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=600&q=80",
   },
 ];
 
@@ -418,6 +423,25 @@ const CURATED_TAGS: Record<string, { tags: string[]; oldPrice?: number }> = {
   },
 };
 
+/**
+ * Corrige as imagens dos anúncios curados que ainda usam placeholders
+ * aleatórios (picsum), trocando por fotos reais do produto.
+ * Idempotente: só atualiza quando a imagem ainda é placeholder.
+ */
+export const fixCatalogImages = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const existing = await ctx.db.query("products").collect();
+    for (const product of existing) {
+      if (!product.image.includes("picsum.photos")) continue;
+      const curated = CURATED_PRODUCTS.find((p) => p.title === product.title);
+      if (curated && curated.image !== product.image) {
+        await ctx.db.patch(product._id, { image: curated.image });
+      }
+    }
+  },
+});
+
 /** Aplica os selos de demonstração em catálogos já semeados (uma única vez). */
 export const enrichCatalog = internalMutation({
   args: {},
@@ -446,7 +470,9 @@ export const seed = action({
   handler: async (ctx): Promise<{ inserted: number }> => {
     const count = await ctx.runQuery(internal.products.countInternal);
     if (count > 0) {
-      // Catálogo já existe: aplica os selos de demonstração uma única vez.
+      // Catálogo já existe: corrige imagens placeholder e aplica os selos
+      // de demonstração (ambos idempotentes).
+      await ctx.runMutation(api.products.fixCatalogImages);
       await ctx.runMutation(internal.products.enrichCatalog);
       return { inserted: 0 };
     }

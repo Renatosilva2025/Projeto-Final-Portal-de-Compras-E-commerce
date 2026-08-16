@@ -1,11 +1,13 @@
 import type { AuthConfig } from "convex/server";
 
-// Provedor de identidade federada da plataforma de hospedagem: tokens
-// assinados (JWT RS256) validados via JWKS. O login próprio do portal usa
-// e-mail/OTP + anônimo (ver src/convex/auth.ts); este provedor permite que
-// quem já está autenticado na plataforma entre sem novo cadastro.
+// Provedor de identidade federada: tokens assinados (JWT RS256) validados
+// via JWKS. O login próprio do portal usa e-mail/OTP + anônimo (ver
+// src/convex/auth.ts); este provedor permite login por conta federada quando
+// o emissor é fornecido pela plataforma de hospedagem via variável de
+// ambiente. Sem a variável, o emissor cai para um endereço inválido
+// proposital (nenhum login federado fica ativo por padrão).
 const federatedIssuer =
-  process.env.VLY_CONVEX_AUTH_ISSUER ?? "https://freebuff.com";
+  process.env.VLY_CONVEX_AUTH_ISSUER ?? "https://auth.example.invalid";
 
 export default {
   providers: [

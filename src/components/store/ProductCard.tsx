@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Eye, Plus } from "lucide-react";
+import { Eye, Plus, Truck } from "lucide-react";
 import { Link } from "react-router";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,19 @@ export function ProductCard({ product }: { product: Product }) {
 
   const tags = productTags(product);
   const discount = hasDiscount(product);
+  const discountPercent = discount
+    ? Math.round((1 - product.price / (product.oldPrice as number)) * 100)
+    : 0;
+
+  /** Parcelamento simulado do portal (gatilho de conversão). */
+  const installment =
+    product.price >= 300
+      ? { times: 12, value: product.price / 12 }
+      : product.price >= 150
+        ? { times: 6, value: product.price / 6 }
+        : product.price >= 50
+          ? { times: 3, value: product.price / 3 }
+          : null;
 
   return (
     <motion.div
@@ -70,37 +83,59 @@ export function ProductCard({ product }: { product: Product }) {
             {product.title}
           </Link>
           <StarRating rate={product.rating.rate} count={product.rating.count} />
-          <div className="mt-auto flex items-end justify-between gap-3 pt-2">
-            <div>
-              {discount && (
-                <p className="text-xs font-medium text-muted-foreground line-through">
-                  {formatPrice(product.oldPrice as number)}
+          <div className="mt-auto pt-2">
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                {discount && (
+                  <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    <span className="line-through">
+                      {formatPrice(product.oldPrice as number)}
+                    </span>
+                    <span className="rounded-full bg-emerald-600/10 px-1.5 py-0.5 text-[10px] font-bold leading-none text-emerald-600">
+                      -{discountPercent}%
+                    </span>
+                  </p>
+                )}
+                <p className="text-xl font-bold tracking-tight text-primary">
+                  {formatPrice(product.price)}
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Ver detalhes de ${product.title}`}
+                  className="rounded-full text-muted-foreground"
+                  onClick={() => setQuickView(true)}
+                >
+                  <Eye className="size-4" />
+                </Button>
+                <Button
+                  type="button"
+                  size="icon"
+                  aria-label={`Adicionar ${product.title} ao carrinho`}
+                  className="rounded-full shadow-sm"
+                  onClick={() => addItem(product)}
+                >
+                  <Plus className="size-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="mt-1.5 space-y-0.5">
+              {installment && (
+                <p className="text-[11px] leading-tight text-muted-foreground">
+                  em até{" "}
+                  <span className="font-semibold text-foreground">
+                    {installment.times}x de {formatPrice(installment.value)}
+                  </span>{" "}
+                  sem juros
                 </p>
               )}
-              <p className="text-xl font-bold tracking-tight text-primary">
-                {formatPrice(product.price)}
+              <p className="flex items-center gap-1 text-[11px] font-medium leading-tight text-emerald-600">
+                <Truck className="size-3" />
+                Frete grátis
               </p>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label={`Ver detalhes de ${product.title}`}
-                className="rounded-full text-muted-foreground"
-                onClick={() => setQuickView(true)}
-              >
-                <Eye className="size-4" />
-              </Button>
-              <Button
-                type="button"
-                size="icon"
-                aria-label={`Adicionar ${product.title} ao carrinho`}
-                className="rounded-full shadow-sm"
-                onClick={() => addItem(product)}
-              >
-                <Plus className="size-4" />
-              </Button>
             </div>
           </div>
         </div>

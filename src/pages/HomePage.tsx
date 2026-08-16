@@ -22,6 +22,7 @@ import { useFavorites } from "@/context/favorites-context";
 import { CategoryCarousel } from "@/components/store/CategoryCarousel";
 import { CategoryFilter } from "@/components/store/CategoryFilter";
 import { EmptyState } from "@/components/store/EmptyState";
+import { FlashSale } from "@/components/store/FlashSale";
 import { ProductCard } from "@/components/store/ProductCard";
 import { ProductCardSkeleton } from "@/components/store/ProductCardSkeleton";
 import { ProductCarousel } from "@/components/store/ProductCarousel";
@@ -32,6 +33,7 @@ import {
   type SortOption,
 } from "@/components/store/SortSelect";
 import { formatPrice } from "@/lib/format";
+import { discountPercent, flashProducts } from "@/lib/flash-sale";
 import { CATEGORY_ICONS } from "@/components/store/category-icons";
 import { categoryLabel } from "@/types/product";
 import type { Product } from "@/types/product";
@@ -147,6 +149,9 @@ export default function HomePage() {
       case "price-desc":
         result.sort((a, b) => b.price - a.price);
         break;
+      case "discount-desc":
+        result.sort((a, b) => discountPercent(b) - discountPercent(a));
+        break;
       case "rating-desc":
         result.sort((a, b) => b.rating.rate - a.rating.rate);
         break;
@@ -176,6 +181,9 @@ export default function HomePage() {
   /** Modo vitrine: sem busca, categoria, ordenação, preço ou favoritos → carrosséis. */
   const browseMode =
     !category && !q && sort === "relevance" && !onlyFavorites && !hasPriceFilter;
+
+  /** Produtos em oferta para a vitrine relâmpago (maior desconto primeiro). */
+  const flash = useMemo(() => flashProducts(allProducts ?? []), [allProducts]);
 
   /** Slug sem acentos usado nas âncoras dos carrosséis. */
   const categorySlug = (value: string) =>
@@ -332,6 +340,9 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* ── Ofertas relâmpago ────────────────────────────────── */}
+        {browseMode && flash.length > 0 && <FlashSale products={flash} />}
 
         {/* ── Catálogo ──────────────────────────────────────────── */}
         <section

@@ -13,6 +13,7 @@ export const SORT_OPTIONS = [
   { value: "name-desc", label: "Nome (Z–A)" },
   { value: "price-asc", label: "Menor preço" },
   { value: "price-desc", label: "Maior preço" },
+  { value: "discount-desc", label: "Maior desconto" },
   { value: "rating-desc", label: "Melhor avaliados" },
 ] as const;
 

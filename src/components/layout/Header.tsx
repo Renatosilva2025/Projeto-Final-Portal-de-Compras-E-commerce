@@ -34,6 +34,7 @@ import { useFavorites } from "@/context/favorites-context";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/format";
 import { Logo } from "./Logo";
+import { MegaMenu } from "./MegaMenu";
 
 const NAV_LINKS = [
   { to: "/", label: "Início", end: true },
@@ -97,6 +98,7 @@ export function Header() {
           <Logo />
 
           <nav className="hidden items-center gap-1 md:flex" aria-label="Principal">
+            <MegaMenu />
             {NAV_LINKS.map((link) => (
               <NavLink
                 key={link.to}
